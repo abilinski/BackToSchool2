@@ -1,0 +1,32 @@
+\begin{theindex}
+
+  \item $*$ {\textbf  {datasets}}
+    \subitem \texttt  {synthMD}, \hyperpage{11}
+
+  \indexspace
+
+  \item \texttt  {initialize\_school}, \hyperpage{2}
+
+  \indexspace
+
+  \item \texttt  {make\_infected}, \hyperpage{3}
+  \item \texttt  {make\_schedule}, \hyperpage{3}
+  \item \texttt  {make\_school}, \hyperpage{4}
+  \item \texttt  {mult\_runs}, \hyperpage{5}
+
+  \indexspace
+
+  \item \texttt  {results}, \hyperpage{7}
+  \item \texttt  {run\_care}, \hyperpage{7}
+  \item \texttt  {run\_class}, \hyperpage{8}
+  \item \texttt  {run\_household}, \hyperpage{8}
+  \item \texttt  {run\_model}, \hyperpage{9}
+  \item \texttt  {run\_rand}, \hyperpage{10}
+  \item \texttt  {run\_specials}, \hyperpage{10}
+  \item \texttt  {run\_staff\_rand}, \hyperpage{11}
+
+  \indexspace
+
+  \item \texttt  {synthMD}, \hyperpage{11}
+
+\end{theindex}
