@@ -106,15 +106,22 @@ set.seed(4324)
   # set working directory
   setwd(paste0(wd, "Base HS"))
 
+  # remove files
+  # file.remove(list.files())
+
   # choose parameter set
-  df_HS = make_df(n_tot = 1500, n_class = 16, high_school = T, n_HH = 2)
-  
+  df_HS = make_df(n_tot = 1500, n_class = 16, high_school = T, 
+                  n_HH = 2, start_type = "mix")
+
   # run code
-  run_parallel(df_HS[1,], synthpop_HS)
+  run_parallel(df_HS, synthpop_HS)
   
   #### ELEMENTARY SCHOOL BASE ####
   setwd(paste0(wd, "Base Elem"))
-  df_ELEM = make_df(n_tot = 1500,
+  
+  # remove files
+  # file.remove(list.files())
+  df_ELEM = make_df(n_tot = 1500, start_type = c("mix", "teacher"),
                     child_trans = .5, child_susp = .5, high_school = F,
                     n_other_adults = 30, n_class = 5, n_HH = 2)
   run_parallel(df_ELEM, synthpop)
@@ -215,33 +222,37 @@ df_HS_supp5 = make_df(n_tot = n_supp, teacher_susp = 1,
 run_parallel(df_HS_supp5, synthpop_HS)
 
 
+
 #### DYNAMIC ADDITIONS ####
-#### HIGH SCHOOL DYNAMIC ####
-  setwd(paste0(wd, "Dynamic High"))
-  file.remove(list.files())
-  df_HS = make_df(n_tot = 1, n_class = 16, high_school = T, n_HH = 2,
-                  start_type = "cont",
-                  scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = 1,
-                  prob = c(1,10,25,50,100)*3/100000, time = 60)
-  
-  set.seed(121)
-  class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
-                      includeFamily = T, n_class = df_ELEM$n_class[1])
-  run_parallel(df_HS[1,], synthpop_HS, class = class)
 
 #### ELEMENTARY SCHOOL DYNAMIC ####
-  setwd(paste0(wd, "Dynamic Elem"))
-  file.remove(list.files())
-  df_ELEM = make_df(n_tot = 1, start_type = "cont",
-                    scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = 1,
-                    prob = c(1,10,25,50,100)*3/100000, time = 60,
-                    child_trans = .5, child_susp = .5, high_school = F,
-                    n_other_adults = 30, n_class = 5, n_HH = 2) 
-  
-  set.seed(3432)
-  class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
-                      includeFamily = T, n_class = df_ELEM$n_class[1])
-  
-  run_parallel(df_ELEM, synthpop, class = class)
+setwd(paste0(wd, "Dynamic Elem"))
+file.remove(list.files())
+df_ELEM = make_df(n_tot = 1000, start_type = "cont",
+                  scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = 1,
+                  prob = c(1,10,25,50,100)*3/100000, time = 60,
+                  child_trans = .5, child_susp = .5, high_school = F,
+                  n_other_adults = 30, n_class = 5, n_HH = 2) 
+
+set.seed(3432)
+class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
+                    includeFamily = T, n_class = df_ELEM$n_class[1])
+run_parallel(df_ELEM, synthpop, class = class)
+
+#### HIGH SCHOOL DYNAMIC ####
+setwd(paste0(wd, "Dynamic High"))
+file.remove(list.files())
+df_HS = make_df(n_tot = 1, n_class = 16, high_school = T, n_HH = 2,
+                start_type = "cont",
+                scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = 1,
+                prob = c(1,10,25,50,100)*3/100000, time = 60)
+
+set.seed(121)
+class = make_school(synthpop = synthpop, n_other_adults = df_HS$n_other_adults[1], 
+                    includeFamily = T, n_class = df_HS$n_class[1])
+run_parallel(df_HS, synthpop_HS, class = class)
+
+
+
 
   

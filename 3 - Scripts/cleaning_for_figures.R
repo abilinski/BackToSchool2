@@ -87,7 +87,7 @@ sim_out = bind_rows(sim_out1, sim_out2) %>%
          attack_level = factor(attack_level, c("Low", "Medium", "High")))
 
 setwd(paste0(wd, "Figures"))
-save(sim_out, file = "fig_output_main.RData")
+save(sim_out, file =  paste0("fig_output_main", Sys.Date(), ".RData"))
 
 ############# UPDATED THROUGH HERE ############# 
 

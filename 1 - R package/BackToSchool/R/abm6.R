@@ -389,11 +389,11 @@ run_class = function(a, df, high_school = F, hs.classes = NA){
     
     # pull class members
     hs.class.members = hs.classes$id[hs.classes$class%in%hs.classes$class[hs.classes$id==a]]
-
+    
     # identify class members
     class_vec = df[df$id%in%hs.class.members & df$id!=a,]
     class_vec$count = sapply(class_vec$id, function(a) sum(hs.class.members==a))
-
+    
     # determine whether a class member becomes infected
     prob_class = rbinom(nrow(class_vec), size = 1, prob = df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*class_vec$susp*class_vec$present_susp*class_vec$count)
     class = class_vec$id
@@ -576,15 +576,15 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
       df.u$symp = 0
       df.u$sub_clin = 0
     }else{
-    df.u$t_exposed = 0
-    df.u$t_inf = set
-    df.u$symp = rbinom(nrow(df.u), size = 1, prob = 1-df.u$p_asymp)
-    df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 0)
-    df.u$t_symp = df.u$t_inf + rnorm(nrow(df.u), mean = 2, sd = .4)
-  }}
+      df.u$t_exposed = 0
+      df.u$t_inf = set
+      df.u$symp = rbinom(nrow(df.u), size = 1, prob = 1-df.u$p_asymp)
+      df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 0)
+      df.u$t_symp = df.u$t_inf + rnorm(nrow(df.u), mean = 2, sd = .4)
+    }}
   
   # add overdispersion
-  attack_mult = rlnorm(nrow(df.u), meanlog = log(.84)-log((.84^2+.3)/.84^2)/2, sdlog = sqrt(log((.84^2+.3)/.84^2)))/.84)
+  attack_mult = rlnorm(nrow(df.u), meanlog = log(.84)-log((.84^2+.3)/.84^2)/2, sdlog = sqrt(log((.84^2+.3)/.84^2)))/.84
   chk = df.u$super_spread | df.u$adult
   df.u$class_trans_prob = ifelse(chk, df.u$class_trans_prob*attack_mult, df.u$class_trans_prob)
   
@@ -740,7 +740,7 @@ run_model = function(time = 30,
                class = (period-1)*m + class)
       hs.classes = hs.classes %>% bind_rows(temp)
     }
-
+    
     #chk = hs.classes$period[hs.classes$id==1]
     #print(nrow(hs.classes[hs.classes$class%in%chk,]))
     
@@ -1096,13 +1096,13 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
       class = make_school(synthpop = synthpop, n_other_adults = n_other_adults, includeFamily = includeFamily, n_class = n_class)
       
     }
-      ## make school
-      school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
-                                 rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
-                                 p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
-                                 attack = attack, child_trans = child_trans, child_susp = child_susp,
-                                 teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
-                                 isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class)
+    ## make school
+    school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
+                               rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
+                               p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
+                               attack = attack, child_trans = child_trans, child_susp = child_susp,
+                               teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
+                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class)
     
     ## make schedule
     sched = make_schedule(time = time + 15, df = school, type = type, total_days = total_days)
