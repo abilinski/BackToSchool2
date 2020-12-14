@@ -8,7 +8,7 @@
 .rs.restartR()
 library(roxygen2)
 library(devtools)
-wd = "~/Dropbox/Schools/Public code/1 - R package/"
+wd = "~/Dropbox/Schools/Public code/1 - R Package/"
 setwd(wd)
 
 # make 
