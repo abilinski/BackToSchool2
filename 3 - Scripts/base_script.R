@@ -9,23 +9,30 @@ library(tictoc)
 library(igraph)
 library(foreach) 
 library(doMC) 
+
+# local
 wd = "~/Dropbox/Schools/Public code/4 - Output/"
+
+# cluster
 wd = "/home/rstudio/BackToSchool2/4 - Output/"
 setwd(wd)
 
-# set up function
-sims = function(df, i){
+####************************** FUNCTIONS TO VARY PARAM SETS **************************#### 
+
+#### RUN SINGLE ITERATION ####
+sims = function(df, i, class = NA){
   out = mult_runs(N = df$n_tot[i], n_contacts = df$n_contacts[i], n_staff_contact = df$n_staff_contact[i], 
                   run_specials_now = df$run_specials_now[i], start_mult = df$start_mult[i], high_school = df$high_school[i],
                   attack = df$attack[i], child_susp = df$child_susp[i], time = df$time[i], synthpop = synthpop,
                   rel_trans = df$rel_trans[i], n_other_adults = df$n_other_adults[i], n_class = df$n_class[i],
-                  class = NA, notify = df$notify[i], test = df$test[i], dedens = df$dedens[i], 
+                  notify = df$notify[i], test = df$test[i], dedens = df$dedens[i], 
                   start_type = df$start_type[i], child_trans = df$child_trans[i], type = df$type[i],
                   days_inf = df$days_inf[i], disperse_transmission = df$disperse_transmission[i], n_start = df$n_start[i], 
                   total_days = df$total_days[i],  teacher_susp = df$teacher_susp[i], mult_asymp = df$mult_asymp[i], 
                   isolate = df$isolate[i], test_sens = df$test_sens[i], test_frac = df$test_frac[i],
                   p_asymp_adult = df$p_asymp_adult[i], p_asymp_child = df$p_asymp_child[i], 
                   p_subclin_adult = df$p_subclin_adult[i], p_subclin_child = df$p_subclin_child[i],
+                  child_prob = df$child_prob[i], adult_prob = df$adult_prob[i], class = class,
                   test_days = df$test_days[i], test_type = df$test_type[i], rel_trans_HH = .04/df$attack[i], n_HH = df$n_HH[i]) %>%
     mutate(id = df$scenario[i], sim = df$sim[i]) %>% bind_cols(df[i,])
   
@@ -34,7 +41,7 @@ sims = function(df, i){
 }
 
 #### RUN IN PARALLEL ####
-run_parallel = function(df, synthpop){  
+run_parallel = function(df, synthpop, class = NA){  
   
   doMC::registerDoMC(cores = detectCores())
   
@@ -42,12 +49,11 @@ run_parallel = function(df, synthpop){
   foreach::getDoParWorkers()
   
   (time_foreach <- system.time(
-    foreach(i=1:nrow(df)) %dopar% sims(df, i)
+    foreach(i=1:nrow(df)) %dopar% sims(df, i, class = NA)
   )[3])
 }
 
 #### MAKE DATA FRAME OF PARAMETERS ####
-
 make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
                    teacher_susp = c(1, .5), start_type = c("mix", "teacher", "child"), 
                    notify = c(F, T), test = c(F,T), n_tot = 1, dedens = 1, n_start = 1, 
@@ -58,20 +64,20 @@ make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
                    test_sens = .9, test_frac = .9, 
                    rel_trans = 1/8, n_HH = 2, test_days = "week", test_type = "all", start_mult = 0,
                    scenario = c("Base case", "Limit contacts", "Reduced class size","A/B (2)"),
-                   high_school = T, child_susp = 1, child_trans = 1, n_class = 63) {
+                   high_school = T, child_susp = 1, child_trans = 1, n_class = 63, prob = 0, disperse = T) {
   
   # make a grid
   df = expand.grid(attack, disperse_transmission, teacher_susp, start_type, notify, test, 1,
                    dedens, n_start, mult_asymp, isolate, days_inf, time, n_contacts, n_staff_contact, n_other_adults,
                    test_sens, test_frac, rel_trans, n_HH, test_days, test_type, start_mult,
                    scenario, high_school, child_susp, child_trans, n_class, p_asymp_adult, p_asymp_child,
-                   p_subclin_adult, p_subclin_child) 
+                   p_subclin_adult, p_subclin_child, prob) 
   
   names(df) = c("attack", "disperse_transmission", "teacher_susp", "start_type", "notify", "test", "n_tot",
                 "dedens", "n_start", "mult_asymp", "isolate", "days_inf", "time", "n_contacts", "n_staff_contact", "n_other_adults",
                 "test_sens", "test_frac", "rel_trans", "n_HH", "test_days", "test_type", "start_mult", 
                 "scenario", "high_school", "child_susp", "child_trans", "n_class", "p_asymp_adult", "p_asymp_child",
-                "p_subclin_adult", "p_subclin_child")
+                "p_subclin_adult", "p_subclin_child", "prob")
   
   df = df %>%  filter(!(test & !notify)) %>%
     mutate(run_specials_now = ifelse(scenario=="Base case" & !high_school, T, F),
@@ -82,65 +88,41 @@ make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
            type = ifelse(grepl("A/B", scenario), "A/B", type),
            total_days = ifelse(grepl("1", scenario), 1, 5),
            total_days = ifelse(grepl("2", scenario), 2, total_days),
+           child_prob = prob/2,
+           adult_prob = prob,
            sim = row_number())
   
   # repeat according to simulation count
-  df <- df[rep(row.names(df), n_tot),] %>% mutate(i = row_number())
+  if(disperse) df <- df[rep(row.names(df), n_tot),] %>% mutate(i = row_number())
   
   return(df)
 }
 
+####************************** SIMULATIONS **************************#### 
+# set seed
 set.seed(4324)
+#### BASE CASES ####
+  #### HIGH SCHOOL BASE ####
+  # set working directory
+  setwd(paste0(wd, "Base HS"))
 
-#### HIGH SCHOOL BASE ####
-setwd(paste0(wd, "Base HS"))
-df_HS = make_df(n_tot = 100, n_class = 16, high_school = T, n_HH = 2)
-run_parallel(df_HS[1,], synthpop_HS)
-
-df_HS = make_df(n_tot = 10, n_class = 16, high_school = T, attack = .03,
-                rel_trans = 1/8, n_HH = 2,
-                start_type = "mix", notify = F, test = F, scenario = "Base case")
-run_parallel(df_HS[1,], synthpop_HS)
-
-run_parallel(df_HS[1,], synthMD_HS)
-
-#### ELEMENTARY SCHOOL BASE ####
-setwd(paste0(wd, "Base Elem"))
-df_ELEM = make_df(n_tot = 2000,
-                  child_trans = .5, child_susp = .5, high_school = F,
-                  n_other_adults = 30, n_class = 5, n_HH = 1)
-run_parallel(df_ELEM, synthpop)
-
-#### HIGH SCHOOL DYNAMIC ####
-
-#### ELEMENTARY SCHOOL DYNAMIC ####
-setwd(paste0(wd, "Elem Dynamic"))
-df_ELEM = make_df(n_tot = 1, start_type = "cont", tacher_susp = 1,
-                  scenario = c("Base case","A/B (2)", "Remote"),
-                  prob = 300/100000,#c(1, seq(10,100, by = 10))/100000*3,
-                  time = 56, 
-                  child_trans = .5, child_susp = .5, high_school = F,
-                  n_other_adults = 30, n_class = 5, n_HH = 1)
-
-df_ELEM = make_df(n_tot = 20, start_type = "cont", attack = .02,
-                  scenario = c("Base case", "Remote"), teacher_susp = 1,
-                  prob = c(20/100000), #c(1, seq(10,100, by = 10))/100000*3,
-                  time = 56, notify = F, test = F,
-                  child_trans = .5, child_susp = .5, high_school = F,
-                  n_other_adults = 30, n_class = 5)
-
-run_parallel(df_ELEM, synthpop)
-out1 = out %>% mutate(Rt2 = ifelse(is.na(Rt), 0, Rt))
-out = out %>% mutate(Rt2 = ifelse(is.na(Rt), 0, Rt))
-colMeans(out1[,1:10], na.rm = T) - colMeans(out[,1:10], na.rm = T)
-
-mean(out1$Rt2) - mean(out$Rt2)
+  # choose parameter set
+  df_HS = make_df(n_tot = 1500, n_class = 16, high_school = T, n_HH = 2)
+  
+  # run code
+  run_parallel(df_HS[1,], synthpop_HS)
+  
+  #### ELEMENTARY SCHOOL BASE ####
+  setwd(paste0(wd, "Base Elem"))
+  df_ELEM = make_df(n_tot = 1500,
+                    child_trans = .5, child_susp = .5, high_school = F,
+                    n_other_adults = 30, n_class = 5, n_HH = 2)
+  run_parallel(df_ELEM, synthpop)
 
 #### SUPPLEMENTS ####
 
 n_supp = 1000
-n_supp = 1
-
+set.seed(2116)
 #### ELEMENTARY SCHOOL ####
 
 #### EQUAL TRANS, 5 seconds
@@ -232,3 +214,34 @@ df_HS_supp5 = make_df(n_tot = n_supp, teacher_susp = 1,
                       n_class = 16, high_school = T)
 run_parallel(df_HS_supp5, synthpop_HS)
 
+
+#### DYNAMIC ADDITIONS ####
+#### HIGH SCHOOL DYNAMIC ####
+  setwd(paste0(wd, "Dynamic High"))
+  file.remove(list.files())
+  df_HS = make_df(n_tot = 1, n_class = 16, high_school = T, n_HH = 2,
+                  start_type = "cont",
+                  scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = 1,
+                  prob = c(1,10,25,50,100)*3/100000, time = 60)
+  
+  set.seed(121)
+  class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
+                      includeFamily = T, n_class = df_ELEM$n_class[1])
+  run_parallel(df_HS[1,], synthpop_HS, class = class)
+
+#### ELEMENTARY SCHOOL DYNAMIC ####
+  setwd(paste0(wd, "Dynamic Elem"))
+  file.remove(list.files())
+  df_ELEM = make_df(n_tot = 1, start_type = "cont",
+                    scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = 1,
+                    prob = c(1,10,25,50,100)*3/100000, time = 60,
+                    child_trans = .5, child_susp = .5, high_school = F,
+                    n_other_adults = 30, n_class = 5, n_HH = 2) 
+  
+  set.seed(3432)
+  class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
+                      includeFamily = T, n_class = df_ELEM$n_class[1])
+  
+  run_parallel(df_ELEM, synthpop, class = class)
+
+  

@@ -244,10 +244,7 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            isolate = rbinom(n, size = 1, prob = isolate),
            
            # transmission probability
-           attack_mult = rlnorm(n, meanlog = log(.84)-log((.84^2+.3)/.84^2)/2, sdlog = sqrt(log((.84^2+.3)/.84^2)))/.84,
-           attack = attack,
-           chk = super_spread | adult,
-           class_trans_prob = ifelse(chk, attack*attack_mult, attack),
+           class_trans_prob = attack,
            class_trans_prob = ifelse(adult, class_trans_prob, child_trans*class_trans_prob),
            class_trans_prob = dedens*class_trans_prob,
            class_trans_prob = ifelse(adult & !family, class_trans_prob*teacher_trans, class_trans_prob),
@@ -586,7 +583,15 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
     df.u$t_symp = df.u$t_inf + rnorm(nrow(df.u), mean = 2, sd = .4)
   }}
   
+  # add overdispersion
+  attack_mult = rlnorm(nrow(df.u), meanlog = log(.84)-log((.84^2+.3)/.84^2)/2, sdlog = sqrt(log((.84^2+.3)/.84^2)))/.84)
+  chk = df.u$super_spread | df.u$adult
+  df.u$class_trans_prob = ifelse(chk, df.u$class_trans_prob*attack_mult, df.u$class_trans_prob)
+  
+  # adjust for asymptomatic infection if applicable
   df.u$class_trans_prob = ifelse(!df.u$symp, df.u$class_trans_prob*mult_asymp, df.u$class_trans_prob)
+  
+  # add end time
   df.u$t_end_inf_home = df.u$t_inf +
     rlnorm(nrow(df.u), meanlog = log(days_inf)-log((days_inf^2 + 2)/days_inf^2)/2, sdlog = sqrt(log((days_inf^2 + 2)/days_inf^2)))
   df.u$t_end_inf = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate, df.u$t_symp, df.u$t_end_inf_home)
@@ -735,7 +740,6 @@ run_model = function(time = 30,
                class = (period-1)*m + class)
       hs.classes = hs.classes %>% bind_rows(temp)
     }
-    save(hs.classes, file = "hs.classes.RData")
 
     #chk = hs.classes$period[hs.classes$id==1]
     #print(nrow(hs.classes[hs.classes$class%in%chk,]))
@@ -1087,15 +1091,18 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
   for(i in 1:N){
     
     ## make class
-    class = make_school(synthpop = synthpop, n_other_adults = n_other_adults, includeFamily = includeFamily, n_class = n_class)
-    
-    ## make school
-    school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
-                               rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
-                               p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
-                               attack = attack, child_trans = child_trans, child_susp = child_susp,
-                               teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
-                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class)
+    if(is.na(class)){
+      
+      class = make_school(synthpop = synthpop, n_other_adults = n_other_adults, includeFamily = includeFamily, n_class = n_class)
+      
+    }
+      ## make school
+      school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
+                                 rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
+                                 p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
+                                 attack = attack, child_trans = child_trans, child_susp = child_susp,
+                                 teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
+                                 isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class)
     
     ## make schedule
     sched = make_schedule(time = time + 15, df = school, type = type, total_days = total_days)
