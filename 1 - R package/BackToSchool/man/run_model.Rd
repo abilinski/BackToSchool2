@@ -25,13 +25,13 @@ run_model(
   test_type = "all",
   adult_prob = 0.013,
   child_prob = 0.056,
-  quarantine.length = 14,
+  quarantine.length = 10,
   quarantine.grace = 3,
   rel_trans_CC = 2,
   rel_trans_adult = 2,
   num_adults = 2,
   bubble = F,
-  no_weekends = F,
+  include_weekends = T,
   df,
   sched
 )
@@ -71,7 +71,7 @@ run_model(
 
 \item{test_type}{group tested; defaults to "all", also allows "staff" and "students"}
 
-\item{quarantine.length}{length of quarantine when someone is infectious; defaults to 14}
+\item{quarantine.length}{length of quarantine when someone is infectious; defaults to 10}
 
 \item{quarantine.grace}{length of grace period after which a quarantined class returns not to be "re-quarantined"}
 
@@ -79,7 +79,7 @@ run_model(
 
 \item{bubble}{whether out-of-school interactions occur with a 'bubble'; defaults to F}
 
-\item{no_weekends}{if TRUE excludes weekends from additional out-of-school mixing, defaults to F}
+\item{include_weekends}{if TRUE excludes weekends from additional out-of-school mixing, defaults to F}
 
 \item{df}{school data frame from make_school()}
 

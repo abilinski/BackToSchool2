@@ -7,7 +7,7 @@
 make_quarantine(
   class_quarantine,
   df.u,
-  quarantine.length = 14,
+  quarantine.length = 10,
   quarantine.grace = 3,
   hs = F,
   hs.classes = NA

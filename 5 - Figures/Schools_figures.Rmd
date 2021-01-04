@@ -2,546 +2,63 @@
 output:
   pdf_document:
     keep_tex: true
-header-includes: 
-  - \usepackage[USenglish]{babel}
-  - \usepackage{fancyhdr}
-  - \pagestyle{fancy}
-  - \renewcommand{\sectionmark}[1]{\markright{#1}}
-  - \fancyhf{}
-  - \lhead{{}}
-  - \rhead{{\today}} 
-  - \cfoot{{\thepage}}
-  - \usepackage[T1]{fontenc}
-  - \usepackage{bm}
-  - \usepackage{mathpazo}
-  - \usepackage{tabularx}
-  - \usepackage{titlesec}
-  - \usepackage{graphicx, xcolor}
-  - \usepackage{wrapfig}
-  - \usepackage{amssymb}
-  - \usepackage{amsmath}
-  - \usepackage{esint}
-  - \usepackage{paralist}
-  - \usepackage{outlines}
-  - \newcommand{\I}{\textrm{I}}
-  - \newcommand{\N}{\mathcal{N}}
-  - \newcommand{\D}{\textrm{D}}
-  - \newcommand{\E}{\mathbb{E}}
-  - \setlength{\parskip}{1em} %0.5\baselineskip
-  - \setlength{\parindent}{0pt}
-  - \linespread{1.15}
-  - \titleformat*{\section}{\Large\scshape\bfseries}
-  - \titleformat*{\subsection}{\large\scshape\bfseries}
-  - \titleformat*{\subsubsection}{\bfseries}
-  - \titleformat*{\paragraph}{\bfseries}
-  - \titleformat*{\subparagraph}{\bfseries}
-  - \renewcommand{\thesection}{\Roman{section}.} % 1.A. as subsections
-  - \renewcommand{\thesubsection}{\Alph{subsection}.} % 1.A. as subsections
-  - \titlespacing{\section}{0pt}{2pt}{3pt}
-  - \titlespacing{\subsection}{0pt}{2pt}{2pt}
-  - \titlespacing{\subsubsection}{0pt}{0pt}{0pt}
-  - \titlespacing{\paragraph}{0pt}{1pt}{5pt}
-  - \titlespacing{\subparagraph}{10pt}{1pt}{5pt}
-  - \usepackage{hyperref}
-  - \usepackage[font={footnotesize}]{subcaption}
-  - \usepackage[font={footnotesize}]{caption}
-  - \usepackage{caption, setspace}
-  - \captionsetup{font={stretch=1}}
-  - \captionsetup[figure]{font=footnotesize,labelfont=footnotesize}
-  - \usepackage{tabto}
-  - \def\quoteattr#1#2{\setbox0=\hbox{#2}#1\tabto{\dimexpr\linewidth-\wd0}\box0}
-  - \makeatletter
-  - \newcommand{\pushright}[1]{\ifmeasuring@#1\hfill$\displaystyle#1$\fi\ignorespaces}
-  - \makeatother
-  - \newcommand{\FixMe}[1]{\textcolor{orange}{ [#1]}}
-  - \newcommand{\Comment}[1]{\textcolor{purple}{\textit{[#1]}}}
-  - \newcommand{\Quickwin}{{\color{blue}{$\bigstar$}} }
-  - \usepackage{letltxmacro}
-  - \LetLtxMacro\Oldfootnote\footnote
-  - \newcommand{\EnableFootNotes}{\LetLtxMacro\footnote\Oldfootnote}
-  - \newcommand{\DisableFootNotes}{\renewcommand{\footnote}[2][]{\relax}}
-  - \makeatother
-  - \graphicspath{{../Output/"}}
+    includes: 
+      in_header: header.tex
 
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, message = F, warning = F)
+knitr::opts_chunk$set(echo = F, message = F, warning = F, 
+                      root.dir = "~/Dropbox/Schools/Public code/4 - Output")
+knitr::opts_knit$set(root.dir = "~/Dropbox/Schools/Public code/4 - Output")
+source("~/Dropbox/Schools/Public code/4 - Output/results.R")
 ```
-\begin{center} 
-    \textbf{\scshape \LARGE Revised figures}\\  \vspace{2mm}
-    {\large Alyssa Bilinski \footnote{Contact: abilinski@g.harvard.edu}} \\
-    Harvard Graduate School of Arts and Sciences
-\end{center}
-    
-\vspace{-0.50em}
 
-## Overview
+\begin{figure}
+\includegraphics{model2.png}
+\caption{Model diagram.  The model includes 3 primary domains: households, schools, and out-of-school social/childcare mixing and incorporates a range of interventions to prevent or reduce transmission.}
+\end{figure}
 
-This document provides a range of updated figures + sensitivity analyses for the paper "Strategies for preventing SARS-CoV-2 transmission in schools: A model-based analysis of safe reopening strategies."
+\clearpage 
 
-```{r}
+\blandscape
 
-####*********************************** SETUP ******************************************####
-# install.packages(c('tidyverse', 'tictoc', 'igraph', 'devtools', rlang'))
-library(rlang)
-library(tidyverse)
-library(tictoc)
-library(igraph)
-library(devtools)
-library(scales)
-library(ggpubr)
-library(see)
-library(gridExtra)
+```{r fig2, fig = T, fig.width = 8, fig.height = 7, fig.cap = "Average number of total secondary transmissions over 30 days (outside of the index case's household) following a single introduction into a school community.  These include both transmission directly from the index case, as well as from secondary and tertiary cases.  The top panel shows elementary schools, where children are assumed to be less susceptible and less infectious, while the bottom panel shows high schools.  Note that axes differ across rows.  The x-axes varies the level of prevention measure uptake, with low uptake assuming minimal interventions and high uptake assuming intensive interventions.  Line colors correspond to scheduling strategies."}
 
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-  
-  numPlots = length(plots)
-  
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  
-  if (numPlots==1) {
-    print(plots[[1]])
-    
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
-
-results = function(out){
-  
-  # estimate results
-  calc = out %>%
-    dplyr::summarize(mean.new =round(mean(tot),4),
-                     more_than_none = round(mean(tot>0),4),
-                     more_than_5 = round(mean(tot>5),4),
-                     median.new = round(median(tot),2),
-                     perc.no.new =  round(mean(R0==0, na.rm = T),2),
-                     upper95 = quantile(tot-1, .99),
-                     mean.symp = mean(symp),
-                     just.one.symp = mean(symp==1),
-                     max = max(tot),
-                     none.left = sum(sick_at_end==0),
-                     worst.10.R0 = quantile(R0, .9, na.rm = T),
-                     mean.R0 = round(mean(R0, na.rm = T), 2),
-                     median.R0 = round(median(R0, na.rm = T),2),
-                     no_issues = sum(R0==0, na.rm = T),
-                     mean.adults = round(mean(adult-start_adult),2),
-                     school.adult = mean((adult-start_adult)>0),
-                     median.adults = round(median(adult),2),
-                     mean.kids =round(mean(children - (1-start_adult)), 2),
-                     mean.symp = round(mean(symp- start_symp), 2),
-                     mean.family = round(mean(family), 2),
-                     mean.asymp = mean.new - mean.symp,
-                     median.kids = round(median(children),2),
-                     classroom = mean(class),
-                     staff = mean(random_staff),
-                     child_care = mean(child_care),
-                     household = mean(household)
-    )
-  return(calc)
-}
-
-pal = c("#457b9d", "#449187", "#52bdd3", "#a8ccb4")
-theme_opts = theme_minimal() + theme(text = element_text(family = "sans"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "darkgrey"))
-
-size = 12
-font = 3
-lim = 8
+ggarrange(a[[1]],b[[1]], common.legend = T, ncol = 1, legend = "right")
 
 ```
 
-\pagebreak
+\elandscape
 
-## Figure 2 
+\clearpage
 
+```{r fig3.2, fig.width = 7, fig.height = 6, fig.cap = "Distribution of secondary transmissions when a single case is introduced assuming self-isolation of individuals with clinical symptoms ('Symptomatic isolation').  The y-axis displays the number of secondary transmissions (outside of the index case's household) when a case is introduced.  Transmissions include both those directly from the index case, as well as those from secondary and tertiary cases.  Distributions are truncated at the 99.5th quantile, i.e. all outcomes occur with at least probability 1/200."}
 
-```{r}
-wd = "/Dropbox/Schools/Public code/4 - Output/Figures"
-setwd(wd)
-load("fig_output_main.RData")
-
-```
-
-```{r}
-
-#### Additional processing ####
-# summarize results
-out = results(sim_out %>% group_by(i, id, n_HH, disperse_transmission, dedens, 
-                                 test, isolate, teacher_susp, notify, attack.y, child_susp, 
-                                 child_trans, start_type, school, strategy, seed_type, attack_level))  %>% ungroup() %>%
-  mutate(id2 = ifelse(id=="Base case", "5-day", id),
-         id2 = ifelse(id=="Limit contacts", "Cohorting", id2),
-         id2 = ifelse(id=="Reduced class size", "1/2 class size", id2),
-         id2 = ifelse(id=="A/B (2)", "A/B", id2),
-         id2 = factor(id2, levels = rev(c("A/B", "1/2 class size", "Cohorting", "5-day"))),
-         strategy = factor(strategy, levels = c("Symptomatic isolation", "Classroom quarantine", "Weekly testing"))) 
-
-```
-
-
-```{r fig2, fig = T, fig.width = 8, fig.height = 7, fig.cap = "Average number of secondary transmissions (outside of the index case's household) following a single introduction into a school community.  The top panel shows elementary schools, where children are assumed to be less susceptible and less infectious, while the bottom panel shows high schools.  Note that axes differ across rows.  The columns vary the attack rate in the school setting, with high attack rate assuming minimal interventions and low attack rate assuming intensive interventions.  Line colors correspond to scheduling strategies."}
-
-a = ggplot(out %>% filter(school == "Elementary school" & teacher_susp==1) %>%
-               filter(seed_type%in%c("Mix")) %>% 
-             mutate(attack.trans = paste(id, seed_type)), 
-           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-    scale_color_manual(name = "", values = pal) + 
-    geom_line() + 
-  geom_point(col = "white", size = 5) + 
-    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "", y = "")
-
-b = ggplot(out %>% filter((school == "High school" & teacher_susp==1)) %>%
-               filter(seed_type=="Mix") %>% mutate(attack.trans = paste(paste(id, child_trans))), 
-           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-    scale_color_manual(name = "", values=pal) + 
-    geom_line() + 
-  geom_point(col = "white", size = 5) + 
-    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "", y = "")
-
-figure = ggarrange(a,b, ncol=1, nrow=2, common.legend = TRUE, legend="right")
-annotate_figure(figure, bottom = "School attack rate", left = "Secondary transmissions")
-```
-
-\pagebreak
-### Supplement additions
-
-
-```{r fig2s1, fig = T, fig.width = 8, fig.height = 7, fig.cap = "Average number of secondary transmissions (outside of the index case's household) following a single introduction into a school community.  Note that axes differ across rows.  The columns vary the attack rate in the school setting, with high attack rate assuming minimal interventions and low attack rate assuming intensive interventions.  Line colors correspond to scheduling strategies."}
-
-a = ggplot(out %>% filter((school == "Elementary school" & child_susp==0.5 & child_trans == .5)) %>%
-               filter(seed_type%in%c("Teacher")) %>% 
-             mutate(attack.trans = paste(id, seed_type)), 
-           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-    scale_color_manual(name = "", values = pal) + 
-    geom_line() + 
-  geom_point(col = "white", size = 5) + 
-    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "", y = "", title = "Elementary: teacher as index case")
-
-b = ggplot(out %>% filter((school == "Elementary school" & child_susp==0.5 & child_trans == 1)) %>%
-               filter(seed_type%in%c("Mix")) %>% 
-             mutate(attack.trans = paste(id, seed_type)), 
-           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-    scale_color_manual(name = "", values = pal) + 
-    geom_line() + 
-  geom_point(col = "white", size = 5) + 
-    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "", y = "", title = "Elementary: children equally likely to transmit COVID-19 as adults")
-
-figure = ggarrange(a,b, ncol=1, nrow=2, common.legend = TRUE, legend="right")
-annotate_figure(figure, bottom = "School attack rate", left = "Secondary transmissions")
-```
-
-
-```{r fig2s2, fig = T, fig.width = 8, fig.height = 3.5, fig.cap = "Average number of secondary transmissions (outside of the index case's household) following a single introduction into a school community.  Note that axes differ across rows.  The columns vary the attack rate in the school setting, with high attack rate assuming minimal interventions and low attack rate assuming intensive interventions.  Line colors correspond to scheduling strategies."}
-
-#a = ggplot(out %>% filter((school == "High school" & child_susp==1 & child_trans == 1)) %>%
-#               filter(seed_type%in%c("Teacher")) %>% 
-#             mutate(attack.trans = paste(id, seed_type)), 
-#           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-#    scale_color_manual(name = "", values = pal) + 
-#    geom_line() + 
-#  geom_point(col = "white", size = 5) + 
-#    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-#    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "", y = "", title = "High school: teacher as index case")
-
-b = ggplot(out %>% filter((school == "High school" & child_susp==0.5 & child_trans == 1)) %>%
-               filter(seed_type%in%c("Mix")) %>% 
-             mutate(attack.trans = paste(id, seed_type)), 
-           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-    scale_color_manual(name = "", values = pal) + 
-    geom_line() + 
-  geom_point(col = "white", size = 5) + 
-    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "School attack rate", y = "Number of secondary transmissions", title = "High school: children half as susceptible to COVID-19 as adults")
-
-#figure = ggarrange(a,b, ncol=1, nrow=2, common.legend = TRUE, legend="right")
-#annotate_figure(figure, bottom = "School attack rate", left = "Secondary transmissions")
-
-b
-```
-\pagebreak
-
-
-```{r fig2s3, fig = T, fig.width = 8, fig.height = 7, fig.cap = "Average number of secondary transmissions (outside of the index case's household) following a single introduction into a school community.  The top panel shows elementary schools, where children are assumed to be less susceptible and less infectious, while the bottom panel shows high schools.  Note that axes differ across rows.  The columns vary the attack rate in the school setting, with high attack rate assuming minimal interventions and low attack rate assuming intensive interventions.  Line colors correspond to scheduling strategies."}
-
-out = x %>% filter(n_HH == 3) %>%
-  mutate(id = ifelse(id=="Base case", "5-day", id),
-         id = ifelse(id=="Limit contacts", "Cohorting", id),
-         id = ifelse(id=="1/2 Class size", "1/2 class size", id)) %>% 
-  #filter(id %in% c("5-day", "Cohorting", "1/2 class size", "A/B (2)")) %>% 
-  mutate(id = factor(id, levels = rev(c("A/B (1)", "A/B (2)", "On/off (1)", "On/off (2)", 
-                                        "1/2 class size", "Cohorting", "5-day", "Remote"))),
-         strategy = factor(strategy, levels = c("Symptomatic isolation", "Classroom quarantine", "Weekly testing"))) %>%
-  filter(!id%in%c("Remote", "5-day", "Cohorting"))
-
-a = ggplot(out %>% filter((school == "Elementary school" & child_susp==0.5 & child_trans == .5)) %>%
-               filter(seed_type%in%c("Mix")) %>% 
-             mutate(attack.trans = paste(id, seed_type)), 
-           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-    scale_color_brewer(name = "", palette = "Set2") + 
-    geom_line() + 
-  geom_point(col = "white", size = 5) + 
-    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "", y = "")
-
-b = ggplot(out %>% filter((school == "High school" & child_susp==1 & child_trans == 1)) %>%
-               filter(seed_type=="Mix") %>% mutate(attack.trans = paste(paste(id, child_trans))), 
-           aes(x = attack_level, y = mean.new, group = attack.trans, col = id)) + 
-    scale_color_brewer(name = "", palette = "Set2") + 
-    geom_line() + 
-  geom_point(col = "white", size = 5) + 
-    facet_grid(school~strategy) + theme_minimal(base_size = size) +
-    geom_text(size = font-1, aes(y = mean.new, label = ifelse(mean.new>10, round(mean.new), round(mean.new, 1)))) + theme_opts + labs(x = "", y = "")
-
-figure = ggarrange(a,b, ncol=1, nrow=2, common.legend = TRUE, legend="right")
-annotate_figure(figure, bottom = "School attack rate", left = "Secondary transmissions")
-```
-
-## Figure 3
-
-```{r}
-
-sim_out = sim_out %>% mutate(attack_level = ifelse(attack.y==.01, "Low", "Medium"),
-         attack_level = ifelse(attack.y==.03, "High", attack_level),
-         attack_level = factor(attack_level, c("High", "Medium", "Low"))) %>% filter(n_HH==3)
-
-fig2 = sim_out %>% mutate(chk = (school == "High school" & child_susp==1) | (child_trans==.5 & child_susp == .5)) %>% filter(chk) %>%
-  mutate(attack_level = ifelse(attack.y==.01, "Low", "Medium"),
-         attack_level = ifelse(attack.y==.03, "High", attack_level),
-         attack_level = factor(attack_level, c("High", "Medium", "Low")),
-    
-         tot_cat = ifelse(tot==0, "0", "1-4"),
-         tot_cat = ifelse(tot > 5, ">5", tot_cat),
-         tot_cat = factor(tot_cat, levels = c("0", "1-4", ">5"))) %>%
-  filter(isolate==1 & id=="Base case" & disperse_transmission == F & dedens==1 & teacher_susp == 1 & 
-           n_HH == 3 & strategy == "Symptomatic isolation")
-
-fig2 = fig2 %>% mutate(denom = ifelse(school == "Elementary school", 1500, 1000)) %>% ungroup() %>% 
-  dplyr::group_by(school, start_type, attack_level) %>% 
-  mutate(R0 = mean(R0), R0 = ifelse(R0>10, round(R0), round(R0, 1))) %>% ungroup() %>%
-  dplyr::group_by(school, start_type, attack_level, tot_cat, denom, R0) %>% dplyr::summarize(num = length(tot_cat)) %>%
-  mutate(pct = num/denom)
-```
-
-```{r fig3, fig.width = 6, fig.height = 5, fig.cap = "Distribution of secondary transmission when a single case is introduced assuming self-isolation of individuals with clinical symptoms.  The y-axis displays the number of secondary transmissions (outside of the index case's household) when a case is introduced.  Distributions are truncated at the 99.5th quantile, i.e. all observations occur with at least probability 1/200."}
-
-sim_out2 = sim_out %>% dplyr::group_by(sim, strategy, id) %>% mutate(quant = quantile(tot, .995)) %>% ungroup() %>% filter(tot < quant)
-
-sim_out3 = sim_out2 %>% filter(strategy=="Symptomatic isolation" & id == "Base case")
-
-fig2 = fig2 %>% mutate(pos = ifelse(attack_level=="Low", 3.4, 2.4),
-                       pos = ifelse(attack_level=="High", 1.4, pos),
-                       lab = ifelse(tot_cat=="0", 
-                                    paste(" P(", tot_cat, ")=", round(pct,2), sep = ""),
-                                    paste("P(", tot_cat, ")=", round(pct,2), sep = "")))
-
-fig2a = fig2 %>% filter(start_type=="mix" & school == "Elementary school") 
-a = ggplot(sim_out3 %>% filter(start_type=="mix" & school == "Elementary school") %>%
-             filter((child_trans==.5 & child_susp==.5) | school == "High school"),
-       aes(x = attack_level, y = tot, group = paste(school, attack_level))) + geom_violinhalf(lwd = .25) + facet_wrap(school~attack_level, scales = "free") + facet_grid(school~.) + theme_minimal(base_size = size) +
-  theme_opts + labs(x = "", y = "") + 
-  geom_text(size = font-1, data = fig2a %>% filter(tot_cat=="0"), aes(x = pos, y = 27, label = lab)) + 
-  geom_text(size = font-1, data = fig2a %>% filter(tot_cat==">5"), aes(x = pos, y = 25, label = lab)) 
-
-fig2b = fig2 %>% filter(start_type=="mix" & school == "High school") 
-b = ggplot(sim_out3 %>% filter(school == "High school") %>%
-             filter((child_trans==.5 & child_susp==.5) | school == "High school"),
-       aes(x = attack_level, y = tot, group = paste(school, attack_level))) + geom_violinhalf(lwd = .25) + facet_wrap(school~attack_level, scales = "free") + facet_grid(school~.) + theme_minimal(base_size = size) +
-theme_opts + labs(x = "", y = "")  + 
-  geom_text(size = font-1, data = fig2b %>% filter(tot_cat=="0"), aes(x = pos, y = 350, label = lab)) + 
-  geom_text(size = font-1, data = fig2b %>% filter(tot_cat==">5"), aes(x = pos, y = 330, label = lab))
-
-figure = ggarrange(a,b, ncol = 1)
-annotate_figure(figure, left = "Number of secondary transmissions", bottom = "School attack rate")
-```
-
-
-```{r fig3.5, fig.width = 6, fig.height = 5, fig.cap = "Distribution of secondary transmission when a single case is introduced assuming self-isolation of individuals with clinical symptoms.  The y-axis displays the number of secondary transmissions (outside of the index case's household) when a case is introduced.  Distributions are truncated at the 99.5th quantile, i.e. all observations occur with at least probability 1/200."}
-
-sim_out2 = sim_out %>% dplyr::group_by(sim, strategy, id) %>% mutate(quant = quantile(tot, .995)) %>% ungroup() %>% filter(tot < quant)
-
-sim_out3 = sim_out2 %>% filter(id == "Base case")
-
-fig2 = fig2 %>% mutate(pos = ifelse(attack_level=="Low", 3.4, 2.4),
-                       pos = ifelse(attack_level=="High", 1.4, pos),
-                       lab = ifelse(tot_cat=="0", 
-                                    paste(" P(", tot_cat, ")=", round(pct,2), sep = ""),
-                                    paste("P(", tot_cat, ")=", round(pct,2), sep = "")))
-
-fig2a = fig2 %>% filter(start_type=="mix") 
-a = ggplot(sim_out3 %>% filter(start_type=="mix") %>%
-             filter((child_trans==.5 & child_susp==.5) | school == "High school"),
-       aes(x = tot, col = attack_level, group = paste(school, attack_level))) +
-  geom_step(aes(y = 1-..y..), stat='ecdf') + facet_wrap(school~strategy, ncol = 3, scales = "free") + theme_minimal(base_size = size) +
-  scale_color_manual(name = "", values = pal) +
-  scale_x_continuous(limits = c(0, NA), expand = c(0,0)) + 
-  theme_opts + labs(x = "Number of secondary transmissions", 
-                    y = "Probability of at least number of secondary transmissions") #+ 
-  #geom_text(size = font-1, data = fig2a %>% filter(tot_cat=="0"), aes(x = pos, y = 27, label = lab)) + 
-  #geom_text(size = font-1, data = fig2a %>% filter(tot_cat==">5"), aes(x = pos, y = 25, label = lab)) 
-
-a
-```
-
-```{r fig3d, fig.width = 6, fig.height = 5, fig.cap = "Distribution of secondary transmission when a single case is introduced assuming self-isolation of individuals with clinical symptoms.  The y-axis displays the number of secondary transmissions (outside of the index case's household) when a case is introduced.  Distributions are truncated at the 99.5th quantile, i.e. all observations occur with at least probability 1/200."}
-
-fig2a = fig2 %>% filter(start_type=="mix" & school == "Elementary school") 
-a = ggplot(sim_out3 %>% filter(start_type=="mix" & school == "Elementary school") %>%
-             filter((child_trans==.5 & child_susp==.5) | school == "High school"),
-       aes(x = attack_level, y = tot, group = paste(school, attack_level))) + geom_boxplot(outlier.shape = 4, outlier.alpha = .2) + facet_wrap(school~attack_level, scales = "free") + facet_grid(school~.) + theme_minimal(base_size = size) +
-  theme_opts + labs(x = "", y = "") + 
-  geom_text(size = font-1, data = fig2a %>% filter(tot_cat=="0"), aes(x = pos, y = 27, label = lab)) + 
-  geom_text(size = font-1, data = fig2a %>% filter(tot_cat==">5"), aes(x = pos, y = 25, label = lab)) 
-
-fig2b = fig2 %>% filter(start_type=="mix" & school == "High school") 
-b = ggplot(sim_out3 %>% filter(start_type=="mix" & school == "High school") %>%
-             filter((child_trans==.5 & child_susp==.5) | school == "High school"),
-       aes(x = attack_level, y = tot, group = paste(school, attack_level))) + geom_boxplot(outlier.shape = 4, outlier.alpha = .2) + facet_wrap(school~attack_level, scales = "free") + facet_grid(school~.) + theme_minimal(base_size = size) +
-theme_opts + labs(x = "", y = "")  + 
-  geom_text(size = font-1, data = fig2b %>% filter(tot_cat=="0"), aes(x = pos, y = 350, label = lab)) + 
-  geom_text(size = font-1, data = fig2b %>% filter(tot_cat==">5"), aes(x = pos, y = 330, label = lab))
-
-figure = ggarrange(a,b, ncol = 1)
-annotate_figure(figure, left = "Number of secondary transmissions", bottom = "School attack rate")
-```
-
-
-```{r fig3.2, fig.width = 7, fig.height = 5, fig.cap = "Distribution of secondary transmission when a single case is introduced assuming self-isolation of individuals with clinical symptoms.  The y-axis displays the number of secondary transmissions (outside of the index case's household) when a case is introduced.  Distributions are truncated at the 99.5th quantile, i.e. all observations occur with at least probability 1/200."}
-
-sim_out4 = sim_out2 %>% filter(strategy%in%c("Symptomatic isolation", "Weekly testing")) %>% 
-  filter(id %in% c("A/B (2)", "Base case")) %>%
-  mutate(id = factor(id, rev(c("A/B (2)", "1/2 Class size", "Cohorting", "Base case"))),
-         grp = paste(as.numeric(id),as.numeric(attack_level), strategy),
-         id.strategy = factor(paste(id, "\n", strategy)),
-         id.strategy = factor(id.strategy, levels = levels(id.strategy)[c(3,4,1,2)]))
-
-fig2a = fig2 %>% filter(start_type=="mix" & school == "Elementary school") 
-a = ggplot(sim_out4 %>% filter(start_type=="mix" & school == "Elementary school") %>%
-             filter((child_trans==.5 & child_susp==.5) | school == "High school"),
-       aes(x = attack_level, y = tot, group = grp, col = id.strategy)) + geom_boxplot(outlier.shape = 4, outlier.alpha = .5) + facet_wrap(school~attack_level, scales = "free") + facet_grid(school~.) + theme_minimal(base_size = size) +
-  theme_opts + labs(x = "", y = "") + scale_color_manual(name = "", values = pal) 
-
-fig2b = fig2 %>% filter(start_type=="mix" & school == "High school") 
-b = ggplot(sim_out4 %>% filter(start_type=="mix" & school == "High school") %>%
-             filter((child_trans==.5 & child_susp==.5) | school == "High school"),
-       aes(x = attack_level, y = tot, group = grp, col = id.strategy)) + geom_boxplot(outlier.shape = 4, outlier.alpha = .2) + facet_wrap(school~attack_level, scales = "free") + facet_grid(school~.) + theme_minimal(base_size = size) +
-theme_opts + labs(x = "", y = "") + scale_color_manual(name = "", values = pal) 
-
-figure = ggarrange(a,b, ncol = 1, common.legend = TRUE, legend="right")
+figure = ggarrange(a1,b1, ncol = 1, common.legend = TRUE, legend="right")
 annotate_figure(figure, left = "Number of secondary transmissions", bottom = "School attack rate")
 
 ```
 
-## Figure 4
+\blandscape
 
-```{r, fig = T, fig.width = 8, fig.height = 8}
-
-setwd("/Users/abilinski/Dropbox/Schools/Analysis/output/")
-load("figure_full_semester.RData")
-
-out_mod = out %>% filter(attack.y==c(.02) & 
-                           strategy%in%c("Classroom quarantine", "Regular testing") & 
-                           (id!="Remote" | strategy!="Regular testing") & 
-                           (var=="school" | id=="Remote")) %>%
-             mutate(id.strategy = ifelse(var=="community", "External", id.strategy),
-                    id.strategy = ifelse(id=="Remote" & var=="school", "Distance learning", id.strategy)) %>% dplyr::group_by(incidence, n_HH, school) %>%
-                    dplyr::mutate(val_ext = value[id.strategy=="External"],
-                      val2 = ifelse(id.strategy=="External", value, value + val_ext + 1e-7)) %>%
-  arrange(incidence, n_HH, school, val2) %>% mutate(val3 = c(val2[1], diff(val2))) %>%
-  mutate(id = ifelse(id.strategy=="External", "External", id),
-         val3 = ifelse(id=="Remote", val3+val_ext, val3)) %>% filter(id!="External")
-
-c1 = ggplot(out_mod %>% filter(school == "Elementary school"), aes(x = incidence*14, y = val3, group = id.strategy, col = id.strategy)) + 
-  geom_line(stat="identity", position = "stack", aes(lty = id=="Remote")) + 
-  #  geom_point(col = "white", size = 7, aes(x = incidence, y = val3), position = position_stack()) + 
-  facet_grid(school~mixing) + theme_minimal(base_size = size) + 
-  labs(x = "", title = "Average fall semester cases/elementary school community", y = "") + 
-  scale_color_manual(name = "Schedule", values = c(pal, "black")) + 
-  scale_linetype(name = "Intervention", guide = F) + 
-  theme_opts +
-  #geom_text(aes(label = ifelse(value>10, round(value), round(value, 1))), size = font, position = position_stack())
-  NULL
-
-
-c_OUT = ggplot(out_mod %>% filter(school == "Elementary school"), aes(x = incidence*14, y = val3, group = paste(id.strategy, n_HH), col = id.strategy)) + 
-  geom_line(stat="identity", position = "stack", aes(lty = factor(n_HH))) + 
-  #  geom_point(col = "white", size = 7, aes(x = incidence, y = val3), position = position_stack()) + 
-  facet_grid(school~.) + theme_minimal(base_size = size) + 
-  labs(x = "", title = "Average fall semester cases/elementary school community", y = "") + 
-  scale_color_manual(name = "Schedule", values = c(pal, "black")) + 
-  scale_linetype(name = "Mixing", guide = F) + 
-  theme_opts +
-  #geom_text(aes(label = ifelse(value>10, round(value), round(value, 1))), size = font, position = position_stack())
-  NULL
-
-c2 = ggplot(out_mod %>% filter(school == "High school"), aes(x = incidence*14, y = val3, group = id.strategy, col = id.strategy)) + 
-  geom_line(stat="identity", position = "stack", aes(lty = id=="Remote")) + 
-   # geom_point(col = "white", size = 7, aes(x = incidence, y = val3), position = position_stack()) + 
-  facet_grid(school~mixing) + theme_minimal(base_size = size) + 
-  labs(x = "", title = "Average fall semester cases/high school community", y = "") + 
-  scale_color_manual(name = "Schedule", values = c(pal, "black"), guide = F) + 
-  scale_linetype(name = "Intervention", guide = F) + 
-  theme_opts + 
-  #geom_text(aes(label = ifelse(value>10, round(value), round(value, 1))), size = font, position = position_stack())
-  NULL 
-
-figure = ggarrange(c1, c2, ncol = 1, common.legend = TRUE, legend="right")
-annotate_figure(figure, bottom = "Average reported 14-day cumulative incidence/100K")
-```
-
-
-```{r, fig.width = 8, fig.height = 6, fig.cap= "Probability that school opening leads to more than 20 additional transmissions above remote learning baseline.  Columns indicate classroom attack rate, with a high attack rate corresponding to minimal uptake of prevention measures like masking and distancing and a low attack rate corresponding to high uptake and adherence of such measures."}
-
-plot_pre = out %>% filter(strategy%in%c("Symptomatic isolation", "Regular testing") & (id!="Remote" | strategy!="Regular testing") & (var=="school")) %>%
-             mutate(
-                    id.strategy = sub("Regular", "Weekly", id.strategy),
-                    id.strategy = ifelse(var=="community", "External", id.strategy),
-                    id.strategy = ifelse(id=="Remote" & var=="school", "Distance learning", id.strategy),
-                    attack_level = ifelse(attack.y==.01, "Low", "Medium"),
-                              attack_level = ifelse(attack.y==.03, "High", attack_level),
-                              attack_level = factor(attack_level, rev(c("Low", "Medium", "High"))))  %>% filter(mixing=="Out-of-school mixing") %>% group_by(attack.y, id.strategy, incidence) %>% filter(id!="Remote")
-                    
-c1 = ggplot(plot_pre %>% filter(school == "Elementary school"),
-            aes(x = incidence*14, y = over20, group = id.strategy, color = id.strategy)) + 
-  geom_line(aes()) + facet_grid(school~attack_level) + theme_minimal(base_size = size) + 
-  labs(x = "", title = "Probability of >20 school-related transmissions during a semester", y = "") +
-  scale_color_manual(name = "Schedule", values = pal) + theme_opts + scale_linetype(guide = F, name = "Intervention")
-
-c2 = ggplot(plot_pre %>% filter(school == "High school"), 
-            aes(x = incidence*14, y = over20, group = id.strategy, color = id.strategy)) + 
-  geom_line(aes()) + facet_grid(school~attack_level) + theme_minimal(base_size = size) + labs(x = "", title = "", y = "") +
-  scale_color_manual(guide = F, name = "Schedule", values = pal) + theme_opts + scale_linetype(name = "Intervention")
-
-figure = ggarrange(c1, c2, ncol = 1, common.legend = TRUE, legend="right")
-annotate_figure(figure, bottom = "Average reported 14-day incidence/100K")
+```{r, fig = T, fig.width = 11, fig.height = 8, fig.cap = "Cumulative incidence over 8 weeks in elementary schools.  The x-axis shows the average daily community incidence per 100,000 population.  The y-axis shows cumulative incidence over 8 weeks.  Columns denote different isolation, quarantine, vaccination, and detection strategies, while rows show different population subgroups."}
+ 
+print(a3[[1]])
 
 ```
+
+\elandscape
+
+\blandscape
+
+```{r, fig = T, fig.width = 11, fig.height = 8, fig.cap = "Cumulative incidence over 8 weeks in high schools.  The x-axis shows the average daily community incidence per 100,000 population.  The y-axis shows cumulative incidence over 8 weeks.  Columns denote different isolation, quarantine, vaccination, and detection strategies, while rows show different population subgroups."}
+ 
+print(b3[[1]])
+
+```
+
+\elandscape
 
 
 

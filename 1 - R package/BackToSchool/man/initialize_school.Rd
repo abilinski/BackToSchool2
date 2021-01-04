@@ -12,6 +12,8 @@ initialize_school(
   rel_trans_brief = 1/50,
   p_asymp_adult = 0.35,
   p_asymp_child = 0.7,
+  p_subclin_adult = 0,
+  p_subclin_child = 0,
   attack = 0.01,
   child_trans = 1,
   child_susp = 0.5,
@@ -35,9 +37,13 @@ initialize_school(
 
 \item{rel_trans_brief}{Relative attack rate of brief contact (vs. classroom); defaults to 1/50}
 
-\item{p_asymp_adult}{Fraction of adults with asymptomatic (unsuspected) disease; defaults to 0.35}
+\item{p_asymp_adult}{Fraction of adults with asymptomatic disease; defaults to 0.4}
 
-\item{p_asymp_child}{Fraction of children with asymptomatic (unsuspected) disease; defaults to 0.7}
+\item{p_asymp_child}{Fraction of children with asymptomatic disease; defaults to 0.8}
+
+\item{p_subclin_adult}{Fraction of adults with subclinical but not techincally asymptomatic disease; defaults to 0}
+
+\item{p_subclin_child}{Fraction of children with subclinical but not techincally asymptomatic disease; defaults to 0}
 
 \item{attack}{Average daily attack rate in adults; defaults to 0.01}
 

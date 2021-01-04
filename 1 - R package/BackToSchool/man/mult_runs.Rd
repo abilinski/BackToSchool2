@@ -14,13 +14,15 @@ mult_runs(
   rel_trans_brief = 1/50,
   rel_trans_CC = 2,
   rel_trans_adult = 2,
-  p_asymp_adult = 0.35,
+  p_asymp_adult = 0.4,
   child_prob = 0.05,
   adult_prob = 0.01,
   p_asymp_child = 0.8,
   attack = 0.01,
   child_trans = 1,
   child_susp = 0.5,
+  p_subclin_adult = 0,
+  p_subclin_child = 0,
   teacher_trans = 1,
   teacher_susp = 1,
   disperse_transmission = T,
@@ -42,12 +44,12 @@ mult_runs(
   test_frac = 0.9,
   test_days = "week",
   test_type = "all",
-  quarantine.length = 14,
+  quarantine.length = 10,
   quarantine.grace = 3,
   type = "base",
   total_days = 5,
   includeFamily = T,
-  synthpop = synthMaryland,
+  synthpop = synthpop,
   class = NA,
   n_class = 4,
   high_school = F,
@@ -55,7 +57,7 @@ mult_runs(
   start_mult = 1,
   start_type = "mix",
   bubble = F,
-  no_weekends = F
+  include_weekends = T
 )
 }
 \arguments{
@@ -73,19 +75,23 @@ mult_runs(
 
 \item{rel_trans_brief}{Relative attack rate of brief contact (vs. classroom); defaults to 1/50}
 
-\item{p_asymp_adult}{Fraction of adults with asymptomatic (unsuspected) disease; defaults to 0.35}
+\item{p_asymp_adult}{Fraction of adults with asymptomatic (unsuspected) disease; defaults to 0.2}
 
 \item{child_prob}{if start_type = "cont", set daily probability of infectious entry for children, defaults to .05}
 
 \item{adult_prob}{if start_type = "cont", set daily probability of infectious entry for adults, defaults to .01}
 
-\item{p_asymp_child}{Fraction of children with asymptomatic (unsuspected) disease; defaults to 0.7}
+\item{p_asymp_child}{Fraction of children with asymptomatic (unsuspected) disease; defaults to 0.8}
 
 \item{attack}{Average daily attack rate in adults; defaults to 0.01}
 
 \item{child_trans}{Relative transmissibility of children (vs. adults); defaults to 1}
 
 \item{child_susp}{Relative transmissibility of children (vs. adults); defaults to .5}
+
+\item{p_subclin_adult}{Fraction of adults with subclinical but not techincally asymptomatic disease; defaults to 0}
+
+\item{p_subclin_child}{Fraction of children with subclinical but not techincally asymptomatic disease; defaults to 0}
 
 \item{teacher_trans}{Factor by which teacher transmissibility is reduced due to intervention; defaults to 1}
 
@@ -127,7 +133,7 @@ mult_runs(
 
 \item{test_type}{group tested; defaults to "all", also allows "staff" and "students"}
 
-\item{quarantine.length}{length of quarantine when someone is infectious; defaults to 14}
+\item{quarantine.length}{length of quarantine when someone is infectious; defaults to 10}
 
 \item{quarantine.grace}{length of grace period after which a quarantined class returns not to be "re-quarantined"}
 

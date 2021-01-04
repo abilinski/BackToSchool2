@@ -11,7 +11,7 @@ library(foreach)
 library(doMC) 
 
 # local
-wd = "~/Dropbox/Schools/Public code/4 - Output/"
+wd = "~/Dropbox/Schools/4 - Output/"
 
 # cluster
 wd = "/home/rstudio/BackToSchool2/4 - Output/"
@@ -20,7 +20,8 @@ setwd(wd)
 ####************************** FUNCTIONS TO VARY PARAM SETS **************************#### 
 
 #### RUN SINGLE ITERATION ####
-sims = function(df, i, class = NA){
+sims = function(df, i, synthpop, class = NA){
+  #set.seed(i)
   out = mult_runs(N = df$n_tot[i], n_contacts = df$n_contacts[i], n_staff_contact = df$n_staff_contact[i], 
                   run_specials_now = df$run_specials_now[i], start_mult = df$start_mult[i], high_school = df$high_school[i],
                   attack = df$attack[i], child_susp = df$child_susp[i], time = df$time[i], synthpop = synthpop,
@@ -34,9 +35,9 @@ sims = function(df, i, class = NA){
                   p_subclin_adult = df$p_subclin_adult[i], p_subclin_child = df$p_subclin_child[i],
                   child_prob = df$child_prob[i], adult_prob = df$adult_prob[i], class = class,
                   test_days = df$test_days[i], test_type = df$test_type[i], rel_trans_HH = .04/df$attack[i], n_HH = df$n_HH[i]) %>%
-    mutate(id = df$scenario[i], sim = df$sim[i]) %>% bind_cols(df[i,])
+    mutate(id = df$scenario[i], i = i, sim = df$sim[i]) %>% left_join(df[i,], "i")
   
-  save(out, file = paste0("results", i, ".RData"))
+  save(out, file = paste0("results", i, "_", Sys.time(), ".RData"))
   rm(out); gc()
 }
 
@@ -49,7 +50,7 @@ run_parallel = function(df, synthpop, class = NA){
   foreach::getDoParWorkers()
   
   (time_foreach <- system.time(
-    foreach(i=1:nrow(df)) %dopar% sims(df, i, class = NA)
+    foreach(i=1:nrow(df)) %dopar% sims(df, i, synthpop, class = NA)
   )[3])
 }
 
@@ -99,22 +100,20 @@ make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
 }
 
 ####************************** SIMULATIONS **************************#### 
-# set seed
-set.seed(4324)
 #### BASE CASES ####
   #### HIGH SCHOOL BASE ####
   # set working directory
   setwd(paste0(wd, "Base HS"))
 
   # remove files
-  # file.remove(list.files())
+  file.remove(list.files())
 
   # choose parameter set
-  df_HS = make_df(n_tot = 1500, n_class = 16, high_school = T, 
-                  n_HH = 2, start_type = "mix")
+  df_HS = make_df(n_tot = 1, n_class = 16, high_school = T, 
+                  n_HH = 2, start_type = "mix") %>% mutate(n_tot = 10)
 
   # run code
-  run_parallel(df_HS, synthpop_HS)
+  run_parallel(df_HS[3,], synthpop_HS)
   
   #### ELEMENTARY SCHOOL BASE ####
   setwd(paste0(wd, "Base Elem"))
@@ -128,12 +127,13 @@ set.seed(4324)
 
 #### SUPPLEMENTS ####
 
-n_supp = 1000
-set.seed(2116)
+n_supp = 1
+
 #### ELEMENTARY SCHOOL ####
 
 #### EQUAL TRANS, 5 seconds
 setwd(paste0(wd, "Elem_supp1"))
+  file.remove(list.files())
 df_ELEM_supp1 = make_df(n_tot = n_supp,
                   child_trans = 1, child_susp = .5, high_school = F,
                   teacher_susp = 1, start_type = "mix",
@@ -142,6 +142,7 @@ run_parallel(df_ELEM_supp1, synthpop)
 
 #### ALTERNATIVE SCHEDULES, 5 seconds
 setwd(paste0(wd, "Elem_supp2"))
+file.remove(list.files())
 df_ELEM_supp2 = make_df(n_tot = n_supp,
                         child_trans = .5, child_susp = .5, high_school = F,
                         teacher_susp = 1, start_type = "mix",
@@ -151,6 +152,7 @@ run_parallel(df_ELEM_supp2, synthpop)
 
 #### OVERDISPERSION, 5 seconds
 setwd(paste0(wd, "Elem_supp3"))
+file.remove(list.files())
 df_ELEM_supp3 = make_df(n_tot = n_supp,
                         child_trans = .5, child_susp = .5, high_school = F,
                         teacher_susp = 1, start_type = "mix",
@@ -160,6 +162,7 @@ run_parallel(df_ELEM_supp3, synthpop)
 
 #### HOUSEHOLDS, 30 seconds
 setwd(paste0(wd, "Elem_supp4"))
+file.remove(list.files())
 df_ELEM_supp4 = make_df(n_tot = n_supp,
                         child_trans = .5, child_susp = .5, high_school = F,
                         teacher_susp = 1, start_type = "mix",
@@ -169,6 +172,7 @@ run_parallel(df_ELEM_supp4, synthpop)
 
 #### PATHWAY THROUGH ASYMPTOMATICS, 7 seconds
 setwd(paste0(wd, "Elem_supp5"))
+file.remove(list.files())
 df_ELEM_supp5 = make_df(n_tot = n_supp,
                         child_trans = 1, child_susp = .5, high_school = F,
                         teacher_susp = 1, start_type = "mix",
@@ -182,6 +186,7 @@ run_parallel(df_ELEM_supp5, synthpop)
 
 # SUSCEPTIBLE - 8 seconds
 setwd(paste0(wd, "HS_supp1"))
+file.remove(list.files())
 df_HS_supp1 = make_df(n_tot = n_supp, teacher_susp = 1,
                       start_type = "mix", child_susp = 0.5,
                       n_class = 16, high_school = T)
@@ -189,6 +194,7 @@ run_parallel(df_HS_supp1, synthpop_HS)
 
 # SCENARIOS - 7 seconds
 setwd(paste0(wd, "HS_supp2"))
+file.remove(list.files())
 df_HS_supp2 = make_df(n_tot = n_supp, teacher_susp = 1,
                       start_type = "mix", child_susp = 1,
                       scenario = c("A/B (1)", "On/off (2)", "On/off (1)"),
@@ -197,6 +203,7 @@ run_parallel(df_HS_supp2, synthpop_HS)
 
 # DISPERSION - 10 seconds
 setwd(paste0(wd, "HS_supp3"))
+file.remove(list.files())
 df_HS_supp3 = make_df(n_tot = n_supp, teacher_susp = 1,
                       start_type = "mix", child_susp = 1,
                       disperse_transmission = T,
@@ -205,6 +212,7 @@ run_parallel(df_HS_supp3, synthpop_HS)
 
 # Households - 10 seconds
 setwd(paste0(wd, "HS_supp4"))
+file.remove(list.files())
 df_HS_supp4 = make_df(n_tot = n_supp, teacher_susp = 1,
                       start_type = "mix", child_susp = 1,
                       n_HH = seq(0,10, by = 2),
@@ -213,6 +221,7 @@ run_parallel(df_HS_supp4, synthpop_HS)
 
 # Through asymptomatic - 10 seconds
 setwd(paste0(wd, "HS_supp5"))
+file.remove(list.files())
 df_HS_supp5 = make_df(n_tot = n_supp, teacher_susp = 1,
                       start_type = "mix", child_susp = 1,
                       p_asymp_adult = .2, p_asymp_child = .4,
@@ -234,20 +243,18 @@ df_ELEM = make_df(n_tot = 1000, start_type = "cont",
                   child_trans = .5, child_susp = .5, high_school = F,
                   n_other_adults = 30, n_class = 5, n_HH = 2) 
 
-set.seed(3432)
 class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
                     includeFamily = T, n_class = df_ELEM$n_class[1])
 run_parallel(df_ELEM, synthpop, class = class)
 
 #### HIGH SCHOOL DYNAMIC ####
 setwd(paste0(wd, "Dynamic High"))
-file.remove(list.files())
-df_HS = make_df(n_tot = 1, n_class = 16, high_school = T, n_HH = 2,
+#file.remove(list.files())
+df_HS = make_df(n_tot = 400, n_class = 16, high_school = T, n_HH = 2,
                 start_type = "cont",
                 scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = 1,
                 prob = c(1,10,25,50,100)*3/100000, time = 60)
 
-set.seed(121)
 class = make_school(synthpop = synthpop, n_other_adults = df_HS$n_other_adults[1], 
                     includeFamily = T, n_class = df_HS$n_class[1])
 run_parallel(df_HS, synthpop_HS, class = class)

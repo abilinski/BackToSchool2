@@ -89,7 +89,7 @@ make_school = function(
            adult = F, family = F, family_staff = F) %>%
     
     # get rid of class placeholder variable
-    select(-class.placeholder) %>%
+    dplyr::select(-class.placeholder) %>%
     
     # randomly reorder kids in classes
     group_by(age) %>% mutate(class = sample(class)) %>% group_by(class) %>%
@@ -133,7 +133,7 @@ make_school = function(
   }
   
   # spread kids data frame so that group variables are columns again
-  kids = kids %>% select(-old, -swap, -swap2) %>% spread(var, value)
+  kids = kids %>% dplyr::select(-old, -swap, -swap2) %>% spread(var, value)
   
   # make teachers data frame
   teachers = data.frame(HH_id = max(kids$HH_id+1):(max(kids$HH_id) + max(kids$class)),
@@ -1082,8 +1082,8 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
-                    adult = numeric(N), teacher = numeric(N), family = numeric(N), staff_family = numeric(N), children = numeric(N),
-                    attack = numeric(N), class = numeric(N), household = numeric(N), detected = numeric(N), symp = numeric(N), symp_kids = numeric(N), avg_infs = numeric(N),
+                    adult = numeric(N), teacher = numeric(N), family = numeric(N), staff_family = numeric(N), children = numeric(N), children_tot = numeric(N), family_tot = numeric(N),
+                    adult_tot = numeric(N), attack = numeric(N), class = numeric(N), household = numeric(N), detected = numeric(N), symp = numeric(N), symp_kids = numeric(N), avg_infs = numeric(N),
                     quarantine_check = numeric(N), quarantined = numeric(N), quarantined_kids = numeric(N), from_kids = numeric(N), related_arts = numeric(N), child_care = numeric(N), random = numeric(N), random_staff = numeric(N), num_classroom = numeric(N))
   
   tic()
@@ -1139,9 +1139,12 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     keep$source_asymp_family_staff[i] =sum(df$family_staff & !df$source_symp & df$t_exposed <= time_keep + time - 1 & df$t_exposed!=-1 & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
     keep$adult[i] = sum(df$t_exposed!=-1 & df$adult & !df$family & df$t_exposed <= time_keep + time - 1)
     keep$teacher[i] = sum(df$t_exposed!=-1 & df$adult & !df$family & df$t_exposed <= time_keep + time - 1 & df$class < 99)
-    keep$family[i] = sum(df$t_exposed!=-1 & df$family & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$family[i] = sum(df$t_exposed!=-1 & df$family & df$t_exposed <= time_keep + time - 1 )
     keep$staff_family[i] = sum(df$t_exposed!=-1 & df$family_staff & df$t_exposed <= time_keep + time - 1)
     keep$children[i] = sum(df$t_exposed!=-1 & !df$adult & df$t_exposed <= time_keep + time - 1)
+    keep$children_tot[i] = sum(df$t_exposed!=-1 & !df$adult & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$school_adult_tot[i] = sum(df$t_exposed!=-1 & df$adult & !df$family & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$family_tot[i] = sum(df$t_exposed!=-1 & df$adult & df$family & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
     keep$symp[i] = sum(df$t_exposed!=-1 & df$symp==1 & df$t_exposed <= time_keep + time - 1)
     keep$symp_kids[i] = sum(df$t_exposed!=-1 & df$symp==1 & df$t_exposed <= time_keep + time - 1 & !df$adult)
     keep$asymp_kids[i] = sum(df$t_exposed!=-1 & df$symp==0 & df$t_exposed <= time_keep + time - 1 & !df$adult)

@@ -5,7 +5,7 @@
 \title{Make school}
 \usage{
 make_school(
-  synthpop = synthMaryland,
+  synthpop = synthpop,
   n_other_adults = 30,
   includeFamily = F,
   n_class = 4
