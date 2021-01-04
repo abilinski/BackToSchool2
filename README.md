@@ -11,4 +11,4 @@ The model includes students (organized into households with siblings and parents
  4. Teacher vaccination
  5. Screening
  
- <img src="https://github.com/abilinski/BackToSchool2/blob/master/5%20-%20Figures/model2.png" width="1000" height="500" />
+ <img src="https://github.com/abilinski/BackToSchool2/blob/master/5%20-%20Figures/model2.png" width="800" height="400" />
