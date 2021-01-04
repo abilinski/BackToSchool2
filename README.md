@@ -9,6 +9,7 @@ The model includes students (organized into households with siblings and parents
  Options for interventions include:
  1. Reducing the classroom attack rate through masking, distancing, and other mitigation measures
  2. Reducing class size
- 3. Alternative schedules
- 4. Teacher vaccination
- 5. Screening
+ 3. Isolation and quarantine
+ 4. Alternative schedules
+ 5. Teacher vaccination
+ 6. Screening
