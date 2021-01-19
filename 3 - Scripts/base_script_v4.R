@@ -82,7 +82,7 @@ make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
   
   df = df %>%  filter(!(test & !notify)) %>%
     filter(teacher_susp==1 | (notify == T & test == F)) %>%
-    filter(!(test_days=="2x_week" & !test)) %>%
+    filter((test_days=="week" & test_sens == .9 & test_frac == .9 & test_type == "all") | test) %>%
     mutate(run_specials_now = ifelse(scenario=="Base case" & !high_school, T, F),
            n_class = ifelse(scenario == "Reduced class size", n_class*2, n_class),
            n_contacts = ifelse(scenario!="Base case", n_contacts/2, n_contacts),
@@ -264,17 +264,32 @@ df_ELEM = make_df(attack = c(.01, .02),
                   n_tot = 1000, start_type = "cont", n_HH = 2,
                   test_days = c("week", "2x_week"), test_type = c("all", "staff"),
                   test_frac = c(.5, .7, .9),
-                  scenario = c("Base case", "A/B (2)", "Remote"), teacher_susp = c(.33,1),
+                  scenario = c("Base case"), teacher_susp = c(.33,1),
                   prob = c(1,10,25,50,100)*3/100000, time = 30,
                   child_trans = .5, child_susp = .5, high_school = F,
                   p_asymp_adult = .2, p_asymp_child = 0,
                   p_subclin_adult = .2, p_subclin_child = .8,
                   mult_asymp = .5,
                   n_other_adults = 30, n_class = 5) 
+
+
+df_ELEM1 = make_df(attack = c(.01, .02), notify = F, test = F,
+                  n_tot = 1000, start_type = "cont", n_HH = 2,
+                  test_days = c("week", "2x_week"), test_type = c("all", "staff"),
+                  test_frac = c(.5, .7, .9),
+                  scenario = c("A/B (2)", "Remote"), teacher_susp = c(.33,1),
+                  prob = c(1,10,25,50,100)*3/100000, time = 30,
+                  child_trans = .5, child_susp = .5, high_school = F,
+                  p_asymp_adult = .2, p_asymp_child = 0,
+                  p_subclin_adult = .2, p_subclin_child = .8,
+                  mult_asymp = .5,
+                  n_other_adults = 30, n_class = 5) 
+
 set.seed(3232)
 class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
                     includeFamily = T, n_class = df_ELEM$n_class[1])
 run_parallel(df_ELEM, synthpop, class = class)
+run_parallel(df_ELEM1, synthpop, class = class)
 
 #### HIGH SCHOOL DYNAMIC ####
 setwd(paste0(wd, "Dynamic High"))

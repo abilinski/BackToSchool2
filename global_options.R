@@ -8,6 +8,9 @@ library(scales)
 library(ggpubr)
 library(see)
 library(gridExtra)
+library(xtable)
+library(knitr)
+#library(kableExtra)
 
 # multiplot function
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
