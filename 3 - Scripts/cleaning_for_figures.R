@@ -37,7 +37,7 @@ read.files = function(path){
 }
 
 setwd(wd)
-folders = list.files()[c(7,13)]
+folders = list.files()[c(7)]
 for(i in folders) {
   read.files(i)
   print(i); gc()

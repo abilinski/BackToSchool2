@@ -34,7 +34,8 @@ sims = function(df, i, synthpop, class = NA){
                   p_asymp_adult = df$p_asymp_adult[i], p_asymp_child = df$p_asymp_child[i], 
                   p_subclin_adult = df$p_subclin_adult[i], p_subclin_child = df$p_subclin_child[i],
                   child_prob = df$child_prob[i], adult_prob = df$adult_prob[i], class = class,
-                  test_days = df$test_days[i], test_type = df$test_type[i], rel_trans_HH = .04/df$attack[i], n_HH = df$n_HH[i]) %>%
+                  test_days = df$test_days[i], test_type = df$test_type[i], rel_trans_HH = .04/df$attack[i], n_HH = df$n_HH[i],
+                  quarantine.length = df$quarantine.length[i], turnaround.time = df$turnaround.time[i]) %>%
     mutate(id = df$scenario[i], i = i, sim = df$sim[i]) %>% left_join(df[i,], "i")
   
   save(out, file = paste0("results", i, "_", Sys.time(), ".RData"))
@@ -65,20 +66,21 @@ make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
                    test_sens = .9, test_frac = .9, 
                    rel_trans = 1/8, n_HH = 2, test_days = "week", test_type = "all", start_mult = 0,
                    scenario = c("Base case", "Limit contacts", "Reduced class size","A/B (2)"),
-                   high_school = T, child_susp = 1, child_trans = 1, n_class = 63, prob = 0, disperse = T) {
+                   high_school = T, child_susp = 1, child_trans = 1, n_class = 63, prob = 0, disperse = T, 
+                   quarantine.length = 10, turnaround.time = 1) {
   
   # make a grid
   df = expand.grid(attack, disperse_transmission, teacher_susp, start_type, notify, test, 1,
                    dedens, n_start, mult_asymp, isolate, days_inf, time, n_contacts, n_staff_contact, n_other_adults,
                    test_sens, test_frac, rel_trans, n_HH, test_days, test_type, start_mult,
                    scenario, high_school, child_susp, child_trans, n_class, p_asymp_adult, p_asymp_child,
-                   p_subclin_adult, p_subclin_child, prob) 
+                   p_subclin_adult, p_subclin_child, prob, quarantine.length, turnaround.time) 
   
   names(df) = c("attack", "disperse_transmission", "teacher_susp", "start_type", "notify", "test", "n_tot",
                 "dedens", "n_start", "mult_asymp", "isolate", "days_inf", "time", "n_contacts", "n_staff_contact", "n_other_adults",
                 "test_sens", "test_frac", "rel_trans", "n_HH", "test_days", "test_type", "start_mult", 
                 "scenario", "high_school", "child_susp", "child_trans", "n_class", "p_asymp_adult", "p_asymp_child",
-                "p_subclin_adult", "p_subclin_child", "prob")
+                "p_subclin_adult", "p_subclin_child", "prob", "quarantine.length", "turnaround.time")
   
   df = df %>%  filter(!(test & !notify)) %>%
     filter(teacher_susp==1 | (notify == T & test == F)) %>%
@@ -269,27 +271,42 @@ df_ELEM = make_df(attack = c(.01, .02),
                   child_trans = .5, child_susp = .5, high_school = F,
                   p_asymp_adult = .2, p_asymp_child = 0,
                   p_subclin_adult = .2, p_subclin_child = .8,
-                  mult_asymp = .5,
+                  mult_asymp = .5, quarantine.length = c(7, 10),
+                  turnaround.time = c(1,2),
                   n_other_adults = 30, n_class = 5) 
 
 
-df_ELEM1 = make_df(attack = c(.01, .02), notify = F, test = F,
+df_ELEM1 = make_df(attack = c(.01, .02), notify = T, test = F,
                   n_tot = 1000, start_type = "cont", n_HH = 2,
                   test_days = c("week", "2x_week"), test_type = c("all", "staff"),
                   test_frac = c(.5, .7, .9),
-                  scenario = c("A/B (2)", "Remote"), teacher_susp = c(.33,1),
+                  scenario = c("A/B (2)"), teacher_susp = c(.33,1),
                   prob = c(1,10,25,50,100)*3/100000, time = 30,
                   child_trans = .5, child_susp = .5, high_school = F,
                   p_asymp_adult = .2, p_asymp_child = 0,
                   p_subclin_adult = .2, p_subclin_child = .8,
-                  mult_asymp = .5,
+                  mult_asymp = .5, quarantine.length = 10, turnaround.time = 2,
                   n_other_adults = 30, n_class = 5) 
+
+df_ELEM2 = make_df(attack = c(.01, .02), notify = F, test = F,
+                   n_tot = 1000, start_type = "cont", n_HH = 2,
+                   test_days = c("week", "2x_week"), test_type = c("all", "staff"),
+                   test_frac = c(.5, .7, .9),
+                   scenario = c("Remote"), teacher_susp = c(.33,1),
+                   prob = c(1,10,25,50,100)*3/100000, time = 30,
+                   child_trans = .5, child_susp = .5, high_school = F,
+                   p_asymp_adult = .2, p_asymp_child = 0,
+                   p_subclin_adult = .2, p_subclin_child = .8,
+                   mult_asymp = .5,
+                   n_other_adults = 30, n_class = 5) 
+
 
 set.seed(3232)
 class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
                     includeFamily = T, n_class = df_ELEM$n_class[1])
 run_parallel(df_ELEM, synthpop, class = class)
 run_parallel(df_ELEM1, synthpop, class = class)
+run_parallel(df_ELEM2, synthpop, class = class)
 
 #### HIGH SCHOOL DYNAMIC ####
 setwd(paste0(wd, "Dynamic High"))
