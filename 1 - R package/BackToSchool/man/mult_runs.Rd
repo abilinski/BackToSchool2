@@ -57,7 +57,8 @@ mult_runs(
   start_mult = 1,
   start_type = "mix",
   bubble = F,
-  include_weekends = T
+  include_weekends = T,
+  turnaround.time = 1
 )
 }
 \arguments{
@@ -152,6 +153,8 @@ mult_runs(
 \item{start_mult}{value to indicate relative frequency of adult/child infections; defaults to 1 (adults 2x as likely as kids)}
 
 \item{bubble}{whether out-of-school interactions occur with a 'bubble'; defaults to F}
+
+\item{turnaround.time}{test turnaround time, default = 1 day}
 
 \item{run_specials}{Whether special subjects are run; defaults to F}
 

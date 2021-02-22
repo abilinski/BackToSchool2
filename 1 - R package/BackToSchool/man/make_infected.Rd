@@ -4,7 +4,14 @@
 \alias{make_infected}
 \title{Set infection parameters}
 \usage{
-make_infected(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = F)
+make_infected(
+  df.u,
+  days_inf,
+  set = NA,
+  mult_asymp = 1,
+  seed_asymp = F,
+  turnaround.time = 1
+)
 }
 \arguments{
 \item{set}{indication of seeding model vs. creating infections}
@@ -12,6 +19,8 @@ make_infected(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = F)
 \item{mult_asymp}{multiplier on asymptomatic infection; default is 1}
 
 \item{seed_asymp}{when making a seed, force to be asymptomatic; default is false}
+
+\item{turnaround.time}{test turnaround time, default = 1 day}
 
 \item{a}{id of infected individual}
 

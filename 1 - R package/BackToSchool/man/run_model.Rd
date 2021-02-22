@@ -32,6 +32,7 @@ run_model(
   num_adults = 2,
   bubble = F,
   include_weekends = T,
+  turnaround.time = 1,
   df,
   sched
 )
@@ -80,6 +81,8 @@ run_model(
 \item{bubble}{whether out-of-school interactions occur with a 'bubble'; defaults to F}
 
 \item{include_weekends}{if TRUE excludes weekends from additional out-of-school mixing, defaults to F}
+
+\item{turnaround.time}{test turnaround time, default = 1 day}
 
 \item{df}{school data frame from make_school()}
 

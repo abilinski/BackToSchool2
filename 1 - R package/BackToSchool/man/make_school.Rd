@@ -4,12 +4,7 @@
 \alias{make_school}
 \title{Make school}
 \usage{
-make_school(
-  synthpop = synthpop,
-  n_other_adults = 30,
-  includeFamily = F,
-  n_class = 4
-)
+make_school(synthpop, n_other_adults = 30, includeFamily = F, n_class = 4)
 }
 \arguments{
 \item{synthpop}{synthetic population; defaults to synthMaryland stored in file}
