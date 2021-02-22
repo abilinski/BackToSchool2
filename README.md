@@ -1,4 +1,4 @@
-# COVID-19 Agent-Based Elementary School Model
+# COVID-19 Agent-Based K-12 School Model
 
  <font size="4"> This code implements an agent-based model of COVID-19 spread in elementary schools in an R package called BackToSchool, stored in this repository.  Package documentation is available [here](https://github.com/abilinski/BackToSchool2/blob/master/1%20-%20R%20package/BackToSchool_0.0.0.9000.pdf).  The package remains under development.  Sample parallelized code is available [here](https://github.com/abilinski/BackToSchool2/blob/master/3%20-%20Scripts/base_script.R).  A working paper is available [here](https://github.com/abilinski/BackToSchool2/blob/master/5%20-%20Draft/Schools_draft.pdf).
  
