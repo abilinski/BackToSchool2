@@ -1108,7 +1108,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                     quarantine_check = numeric(N), quarantined = numeric(N), quarantined_tot = numeric(N), quarantined_kids = numeric(N), from_kids = numeric(N), related_arts = numeric(N), 
                     child_care = numeric(N), random = numeric(N), random_staff = numeric(N), num_classroom = numeric(N), avg_class = numeric(N), clin_staff = numeric(N), clin_students = numeric(N), clin_family = numeric(N))
   
-  tic()
+  #tic()
   # run over time
   for(i in 1:N){
     
@@ -1190,10 +1190,10 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     keep$clin_students[i] = sum(!df$sub_clin & !df$adult, na.rm = T)
     keep$clin_family[i] = sum(!df$sub_clin & df$family, na.rm = T)
     
-    print(i) 
+    #print(i) 
   }
   
-  toc()
+  #toc()
   
   return(keep) #keep) #list(keep, mod, class, sched))
 }
