@@ -78,7 +78,7 @@ library(tictoc)
 #' @export
 make_school = function(
   # starting synthetic population
-  synthpop = synthpop, n_other_adults = 30, includeFamily = F, n_class = 4){
+  synthpop, n_other_adults = 30, includeFamily = F, n_class = 4){
   
   # select rows
   kids = synthpop %>%
@@ -223,6 +223,7 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            detected = 0,
            quarantined = 0,
            quarantined2 = 0,
+           test_ct = 0,
            n_contact = n_contacts,
            n_contact_brief = n_contacts_brief,
            relative_trans = rel_trans,
@@ -523,13 +524,14 @@ make_quarantine = function(class_quarantine, df.u, quarantine.length = 10, quara
     # note classes to potentially be quarantined
     for(k in 1:nrow(class_quarantine)){
       hold = class_quarantine$hold[k] 
-      class_quarantine$hold[k] = ifelse(class_quarantine$class[k]%in%df.u$class,
+      class_quarantine$hold[k] = ifelse(class_quarantine$class[k]%in%df.u$class & (class_quarantine$group[k]%in%df.u$group | class_quarantine$group[k]==99),  
                                         max(df.u$t_notify[df.u$class==class_quarantine$class[k]]), class_quarantine$hold[k])
     }
     
     # quarantine if class has been back for more than grace period of days after previous quarantine
     class_quarantine$t_notify = ifelse(class_quarantine$hold > class_quarantine$t_notify + quarantine.length + quarantine.grace,
                                        class_quarantine$hold, class_quarantine$t_notify)
+    class_quarantine$num = ifelse(class_quarantine$hold > class_quarantine$t_notify, class_quarantine$num + 1, class_quarantine$num)
   }else{ 
     
     hs.classes2 = hs.classes %>% inner_join(df.u %>% select(id, t_notify), c("id" = "id"))
@@ -557,12 +559,13 @@ make_quarantine = function(class_quarantine, df.u, quarantine.length = 10, quara
 #' @param set indication of seeding model vs. creating infections
 #' @param mult_asymp multiplier on asymptomatic infection; default is 1
 #' @param seed_asymp when making a seed, force to be asymptomatic; default is false
+#' @param turnaround.time test turnaround time, default = 1 day
 #'
 #' @return df.u with updated parameters
 #'
 #' @export
 # note to self -- add additional parameters to change around here
-make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = F){
+make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = F, turnaround.time = 1){
   
   if(is.na(set)){
     #  set infectivity  parameters
@@ -596,7 +599,7 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
   df.u$t_end_inf_home = df.u$t_inf +
     rlnorm(nrow(df.u), meanlog = log(days_inf)-log((days_inf^2 + 2)/days_inf^2)/2, sdlog = sqrt(log((days_inf^2 + 2)/days_inf^2)))
   df.u$t_end_inf = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate, df.u$t_symp, df.u$t_end_inf_home)
-  df.u$t_notify = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate, round(df.u$t_symp + 1), -17)
+  df.u$t_notify = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate, round(df.u$t_symp + turnaround.time), -17)
   
   return(df.u)
 }
@@ -665,6 +668,7 @@ run_specials = function(a, df, specials){
 #' @param test_type group tested; defaults to "all", also allows "staff" and "students"
 #' @param num_adults number of adults interacting with children, defaults to 2
 #' @param include_weekends if TRUE excludes weekends from additional out-of-school mixing, defaults to F
+#' @param turnaround.time test turnaround time, default = 1 day
 #' @param df school data frame from make_school()
 #' @param sched schedule data frame from make_schedule()
 #'
@@ -702,6 +706,7 @@ run_model = function(time = 30,
                      num_adults = 2,
                      bubble = F,
                      include_weekends = T,
+                     turnaround.time = 1,
                      df, sched){
   
   #### SEED MODEL ####
@@ -749,7 +754,8 @@ run_model = function(time = 30,
   }
   
   # quarantine
-  if(!high_school){class_quarantine = data.frame(class = unique(df$class[df$class!=99]), t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length)
+  if(!high_school){class_quarantine = data.frame(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
+                                                                                                                 !=99]), t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
   }else{class_quarantine = data.frame(class = unique(hs.classes$class), t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length)}
   mat = matrix(NA, nrow = max(df$id), ncol = time)
   
@@ -781,7 +787,7 @@ run_model = function(time = 30,
   # set actual seeds
   if(length(time_seed_inf)>0){
     df[df$id%in%id.samp,] = make_infected(df.u = df[df$id%in%id.samp,], days_inf = days_inf,
-                                          set  = time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp)
+                                          set  = time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
     df$start = df$id %in% id.samp
     
     df.u = df[df$id%in%id.samp,]
@@ -794,14 +800,20 @@ run_model = function(time = 30,
   
   # test days
   # if null, make this Sunday
-  if(test_days == "week") {testing_days = seq(7, (time+15), by = 7)}
+  if(test_days == "week") {testing_days = seq(1, (time+15), by = 7)}
   if(test_days == "day") {testing_days = 1:(time+15)}
-  if(test_days == "2x_week"){testing_days = c(seq(3, (time+15), by = 7), seq(7, (time+15), by = 7))}
+  if(test_days == "2x_week"){
+    if(turnaround.time>1){
+      testing_days = c(seq(5, (time+15), by = 7), seq(1, (time+15), by = 7))
+    } else{
+      testing_days = c(seq(4, (time+15), by = 7), seq(1, (time+15), by = 7))
+    }}
   
   # testing
   if(test_type=="all"){ df$test_type = !df$family
   } else if(test_type=="staff"){df$test_type = df$adult & !df$family
   } else if(test_type=="students"){df$test_type = !df$adult}
+  class_test_ind = 0
   
   df$uh.oh = 0
   
@@ -814,16 +826,17 @@ run_model = function(time = 30,
     classes_out = class_quarantine[class_quarantine$t_notify > -1 & class_quarantine$t_notify <= t & t <= (class_quarantine$t_notify + quarantine.length-1),]
     
     # present
-    df$present = sched$present[sched$t==t] & !df$class%in%classes_out$class & !df$HH_id%in%df$HH_id[df$class%in%classes_out$class]
+    df$q_out = df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)
+    df$present = sched$present[sched$t==t] & !df$q_out & !df$HH_id%in%df$HH_id[df$q_out]
     if(high_school & nrow(classes_out)>0){
       df$nq = !unlist(lapply(classes.ind, function(a) sum(a %in% classes_out$class)>0))
       df$present =  sched$present[sched$t==t] & df$nq
     }
     df$not_inf = df$t_exposed==-1 | df$t_exposed > t # if exposed from community, can be exposed earlier
     df$present_susp = df$present & df$not_inf
-    df$quarantined = df$quarantined + as.numeric(df$class%in%classes_out$class & sched$present[sched$t==t])
-    df$quarantined2 = df$quarantined + as.numeric(df$class%in%classes_out$class)
-    df$quarantined_now = df$class%in%classes_out$class & sched$present[sched$t==t]
+    df$quarantined = df$quarantined + as.numeric(df$q_out & sched$present[sched$t==t])
+    df$quarantined2 = df$quarantined + as.numeric(df$q_out)
+    df$quarantined_now = df$q_out & sched$present[sched$t==t]
     
     # check who is present
     mat[,(t-time_seed_inf+1)] = df$present
@@ -861,10 +874,12 @@ run_model = function(time = 30,
     if(test & t%in%testing_days){
       #print(test); print(t); print(testing_days)
       #print(t)
+      df$test_ct = df$test_ct + rbinom(nrow(df), size = 1, prob = df$present*test_frac*as.numeric(df$test_type))
       df$test = rbinom(nrow(df), size = 1, prob = test_sens*test_frac*as.numeric(df$test_type))
-      df$t_end_inf = ifelse(df$inf & df$test, t, df$t_end_inf)
-      df$t_notify = ifelse(df$inf & df$test, t, df$t_end_inf)
-      df$detected = ifelse(df$inf & df$test, 1, df$detected)
+      df$t_end_inf = ifelse(df$inf & df$test & df$present, t, df$t_end_inf)
+      df$t_notify = ifelse(df$inf & df$test & df$present, t, df$t_end_inf)
+      df$detected = ifelse(df$inf & df$test & df$present, 1, df$detected)
+      class_test_ind = class_test_ind + length(unique(df$class[df$test_type & df$present & !df$quarantined]))
       
       # set up notification
       df.u = df %>% filter(inf & test)
@@ -1000,7 +1015,7 @@ run_model = function(time = 30,
     if(sum(df$now>0)){
       
       df$t_exposed[df$now] = t
-      df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp)
+      df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
       df.u = df[df$now,]
       
       # set up notification
@@ -1017,6 +1032,7 @@ run_model = function(time = 30,
   # remember to add mat back in
   #print(df$id[df$t_exposed!=-1 & df$class==df$class[df$start]])
   #print(sum(df$t_exposed!=-1))
+  df$class_test_ind = class_test_ind
   return(df) #, time_seed_inf, class_quarantine, mat))
 }
 
@@ -1065,6 +1081,7 @@ run_model = function(time = 30,
 #' @param adult_prob if start_type = "cont", set daily probability of infectious entry for adults, defaults to .01
 #' @param quarantine.length length of quarantine when someone is infectious; defaults to 10
 #' @param quarantine.grace length of grace period after which a quarantined class returns not to be "re-quarantined"
+#' @param turnaround.time test turnaround time, default = 1 day
 #' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
 #' @param total_days number of days in school; defaults to 5
 #' @param num_adults number of adults interacting with children, defaults to 2
@@ -1080,14 +1097,14 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
-                     bubble = F, include_weekends = T){
+                     bubble = F, include_weekends = T, turnaround.time = 1){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
                     adult = numeric(N), teacher = numeric(N), family = numeric(N), staff_family = numeric(N), children = numeric(N), children_tot = numeric(N), family_tot = numeric(N),
                     adult_tot = numeric(N), attack = numeric(N), class = numeric(N), household = numeric(N), detected = numeric(N),
                     detected_staff = numeric(N), detected_students = numeric(N), detected_staff_subclin = numeric(N), detected_students_subclin = numeric(N),
-                    symp = numeric(N), symp_kids = numeric(N), avg_infs = numeric(N),
+                    symp = numeric(N), symp_kids = numeric(N), avg_infs = numeric(N), class_test_ind = numeric(N),
                     quarantine_check = numeric(N), quarantined = numeric(N), quarantined_tot = numeric(N), quarantined_kids = numeric(N), from_kids = numeric(N), related_arts = numeric(N), 
                     child_care = numeric(N), random = numeric(N), random_staff = numeric(N), num_classroom = numeric(N), avg_class = numeric(N), clin_staff = numeric(N), clin_students = numeric(N), clin_family = numeric(N))
   
@@ -1119,7 +1136,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    n_start = n_start, time_seed_inf = time_seed_inf, high_school = high_school, nper = nper, 
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
-                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends)
+                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time)
     
     time_keep = df$start.time[1]
     
@@ -1132,6 +1149,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     keep$Rt[i] =  mean(df$tot_inf[df$t_exposed!=-1], na.rm = T)
     keep$avg_infs[i] = mean(df$tot_inf[df$t_exposed!=-1 & !df$start])
     keep$start[i] = sum(df$start)
+    keep$class_test_ind[i] = df$class_test_ind[1]
     keep$detected[i] = sum(df$detected)
     keep$detected_staff[i] = sum(df$detected[df$adult])
     keep$detected_students[i] = sum(df$detected[!df$adult])
