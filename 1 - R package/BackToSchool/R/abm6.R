@@ -666,6 +666,7 @@ run_specials = function(a, df, specials){
 #' @param quarantine.grace length of grace period after which a quarantined class returns not to be "re-quarantined"
 #' @param start_mult value to indicate relative frequency of adult/child infections; defaults to 1 (adults 2x as likely as kids)
 #' @param test_type group tested; defaults to "all", also allows "staff" and "students"
+#' @param test_start_day day tests are implemented for weekly testing; defaults to 1 = Monday
 #' @param num_adults number of adults interacting with children, defaults to 2
 #' @param include_weekends if TRUE excludes weekends from additional out-of-school mixing, defaults to F
 #' @param turnaround.time test turnaround time, default = 1 day
@@ -686,6 +687,7 @@ run_model = function(time = 30,
                      test_days = "week",
                      test_sens =  .7,
                      test_frac = .9,
+                     test_start_day = 1,
                      n_staff_contact = 0,
                      n_HH = 0,
                      n_start = 1,
@@ -795,12 +797,12 @@ run_model = function(time = 30,
     if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
   }
   # compress if time_seed_inf is a vector
-  if(start_type == "cont") time_seed_inf = 7 # start on Sunday with testing
+  if(start_type == "cont") time_seed_inf = 15 # start on Monday with testing
   df$start.time = time_seed_inf
   
   # test days
   # if null, make this Sunday
-  if(test_days == "week") {testing_days = seq(1, (time+15), by = 7)}
+  if(test_days == "week") {testing_days = seq(test_start_day, (time+15), by = 7)}
   if(test_days == "day") {testing_days = 1:(time+15)}
   if(test_days == "2x_week"){
     if(turnaround.time>1){
@@ -1072,6 +1074,7 @@ run_model = function(time = 30,
 #' @param test_sens test sensitivity; defaults to 0.7
 #' @param test_frac fraction of school tested; defaults to 0.9
 #' @param test_days vector indicating days on which students are tested; defaults to Sundays
+#' @param test_start_day day tests are implemented for weekly testing; defaults to 1 = Monday
 #' @param test_type group tested; defaults to "all", also allows "staff" and "students"
 #' @param high_school whether to use a high school schedule of random period mixing; defaults to F
 #' @param nper number of school periods; defaults to 8
@@ -1097,7 +1100,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
-                     bubble = F, include_weekends = T, turnaround.time = 1){
+                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
@@ -1136,7 +1139,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    n_start = n_start, time_seed_inf = time_seed_inf, high_school = high_school, nper = nper, 
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
-                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time)
+                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time, test_start_day = test_start_day)
     
     time_keep = df$start.time[1]
     
