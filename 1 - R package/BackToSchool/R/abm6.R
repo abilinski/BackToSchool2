@@ -756,8 +756,9 @@ run_model = function(time = 30,
   }
   
   # quarantine
-  if(!high_school){class_quarantine = data.frame(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
-                                                                                                                 !=99]), t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
+  if(!high_school){class_quarantine = expand_grid(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
+                                                                                                                 !=99])) %>%
+    mutate(t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
   }else{class_quarantine = data.frame(class = unique(hs.classes$class), t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length)}
   mat = matrix(NA, nrow = max(df$id), ncol = time)
   
