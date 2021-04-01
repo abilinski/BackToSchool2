@@ -670,6 +670,7 @@ run_specials = function(a, df, specials){
 #' @param num_adults number of adults interacting with children, defaults to 2
 #' @param include_weekends if TRUE excludes weekends from additional out-of-school mixing, defaults to F
 #' @param turnaround.time test turnaround time, default = 1 day
+#' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
 #' @param df school data frame from make_school()
 #' @param sched schedule data frame from make_schedule()
 #'
@@ -709,6 +710,7 @@ run_model = function(time = 30,
                      bubble = F,
                      include_weekends = T,
                      turnaround.time = 1,
+                     type = "base",
                      df, sched){
   
   #### SEED MODEL ####
@@ -756,6 +758,7 @@ run_model = function(time = 30,
   }
   
   # quarantine
+  if(type=="base") df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
   if(!high_school){class_quarantine = expand_grid(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
                                                                                                                  !=99])) %>%
     mutate(t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
@@ -770,7 +773,7 @@ run_model = function(time = 30,
     child_IDs = df$id[!df$adult]
     
     # pick times
-    vec = 1:time
+    vec = 1:(time+15)
     adult_pulls = rbinom(time, size = length(adult_IDs), prob = adult_prob)
     adult_times = rep(vec, adult_pulls)
     
@@ -1140,7 +1143,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    n_start = n_start, time_seed_inf = time_seed_inf, high_school = high_school, nper = nper, 
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
-                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time, test_start_day = test_start_day)
+                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time, test_start_day = test_start_day, type = type)
     
     time_keep = df$start.time[1]
     
