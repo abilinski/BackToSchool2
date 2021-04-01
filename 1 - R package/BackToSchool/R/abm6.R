@@ -774,10 +774,10 @@ run_model = function(time = 30,
     
     # pick times
     vec = 1:(time+15)
-    adult_pulls = rbinom(time, size = length(adult_IDs), prob = adult_prob)
+    adult_pulls = rbinom(time+15, size = length(adult_IDs), prob = adult_prob)
     adult_times = rep(vec, adult_pulls)
     
-    child_pulls = rbinom(time, size = length(child_IDs), prob = child_prob)
+    child_pulls = rbinom(time+15, size = length(child_IDs), prob = child_prob)
     child_times = rep(vec, child_pulls)
     
     # pick people
@@ -805,7 +805,7 @@ run_model = function(time = 30,
   df$start.time = time_seed_inf
   
   # test days
-  # if null, make this Sunday
+  # if null, make this Monday
   if(test_days == "week") {testing_days = seq(test_start_day, (time+15), by = 7)}
   if(test_days == "day") {testing_days = 1:(time+15)}
   if(test_days == "2x_week"){
