@@ -272,12 +272,11 @@ df_ELEM = make_df(attack = c(.01, .02),
                   p_asymp_adult = .2, p_asymp_child = 0,
                   p_subclin_adult = .2, p_subclin_child = .8,
                   mult_asymp = .5, quarantine.length = c(7, 10),
-                  turnaround.time = c(1,2),
+                  turnaround.time = c(0,1,2),
                   n_other_adults = 30, n_class = 5) 
 
-
 df_ELEM1 = make_df(attack = c(.01, .02), notify = T, test = F,
-                  n_tot = 1000, start_type = "cont", n_HH = 2,
+                  n_tot = 1, start_type = "cont", n_HH = 2,
                   test_days = c("week", "2x_week"), test_type = c("all", "staff"),
                   test_frac = c(.5, .7, .9),
                   scenario = c("A/B (2)"), teacher_susp = c(.33,1),
@@ -292,12 +291,12 @@ df_ELEM2 = make_df(attack = c(.01, .02), notify = F, test = F,
                    n_tot = 1000, start_type = "cont", n_HH = 2,
                    test_days = c("week", "2x_week"), test_type = c("all", "staff"),
                    test_frac = c(.5, .7, .9),
-                   scenario = c("Remote"), teacher_susp = c(.33,1),
+                   scenario = c("Remote"), teacher_susp = c(1),
                    prob = c(1,10,25,50,100)*3/100000, time = 30,
                    child_trans = .5, child_susp = .5, high_school = F,
                    p_asymp_adult = .2, p_asymp_child = 0,
                    p_subclin_adult = .2, p_subclin_child = .8,
-                   mult_asymp = .5,
+                   mult_asymp = .5, quarantine.length = 10, turnaround.time = 2,
                    n_other_adults = 30, n_class = 5) 
 
 
