@@ -758,7 +758,8 @@ run_model = function(time = 30,
   }
   
   # quarantine
-  if(type=="base") df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
+  #if(type=="base") 
+  df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
   if(!high_school){class_quarantine = expand_grid(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
                                                                                                                  !=99])) %>%
     mutate(t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
