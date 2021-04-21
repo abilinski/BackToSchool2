@@ -671,6 +671,7 @@ run_specials = function(a, df, specials){
 #' @param include_weekends if TRUE excludes weekends from additional out-of-school mixing, defaults to F
 #' @param turnaround.time test turnaround time, default = 1 day
 #' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
+#' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param df school data frame from make_school()
 #' @param sched schedule data frame from make_schedule()
 #'
@@ -711,6 +712,7 @@ run_model = function(time = 30,
                      include_weekends = T,
                      turnaround.time = 1,
                      type = "base",
+                     version = 2,
                      df, sched){
   
   #### SEED MODEL ####
@@ -758,8 +760,7 @@ run_model = function(time = 30,
   }
   
   # quarantine
-  #if(type=="base") 
-  df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
+  if(version ==1 | type=="base") df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
   if(!high_school){class_quarantine = expand_grid(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
                                                                                                                  !=99])) %>%
     mutate(t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
@@ -1091,6 +1092,7 @@ run_model = function(time = 30,
 #' @param quarantine.grace length of grace period after which a quarantined class returns not to be "re-quarantined"
 #' @param turnaround.time test turnaround time, default = 1 day
 #' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
+#' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param total_days number of days in school; defaults to 5
 #' @param num_adults number of adults interacting with children, defaults to 2
 
@@ -1105,7 +1107,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
-                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1){
+                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, version = 2){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
@@ -1144,7 +1146,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    n_start = n_start, time_seed_inf = time_seed_inf, high_school = high_school, nper = nper, 
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
-                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time, test_start_day = test_start_day, type = type)
+                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time, test_start_day = test_start_day, type = type, version = version)
     
     time_keep = df$start.time[1]
     
