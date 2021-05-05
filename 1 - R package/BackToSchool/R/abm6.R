@@ -795,7 +795,7 @@ run_model = function(time = 30,
   # set actual seeds
   if(length(time_seed_inf)>0){
     df[df$id%in%id.samp,] = make_infected(df.u = df[df$id%in%id.samp,], days_inf = days_inf,
-                                          set  = time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
+                                          set = time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
     df$start = df$id %in% id.samp
     
     df.u = df[df$id%in%id.samp,]
@@ -1149,14 +1149,13 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     
     time_keep = df$start.time[1]
     
-    
     # store output
-    keep$all[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1)
-    keep$tot[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$from_kids[i] = 0#sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]) & !df$adult[df$source])
+    keep$all[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1)
+    keep$tot[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$from_kids[i] = 0#sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]) & !df$adult[df$source])
     keep$R0[i] = sum(df$tot_inf[df$start])
-    keep$Rt[i] =  mean(df$tot_inf[df$t_exposed!=-1], na.rm = T)
-    keep$avg_infs[i] = mean(df$tot_inf[df$t_exposed!=-1 & !df$start])
+    keep$Rt[i] =  mean(df$tot_inf[df$t_inf!=0 & df$t_inf>=time_keep], na.rm = T)
+    keep$avg_infs[i] = mean(df$tot_inf[df$t_inf!=0 & df$t_inf>=time_keep & !df$start])
     keep$start[i] = sum(df$start)
     keep$class_test_ind[i] = df$class_test_ind[1]
     keep$detected[i] = sum(df$detected)
@@ -1173,28 +1172,28 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     keep$start_adult[i] = sum(df$adult[df$start])
     keep$start_family[i] = sum(df$family[df$start])
     keep$start_symp[i] = sum(df$symp[df$start], na.rm = T)
-    keep$source_asymp[i] = sum(!df$source_symp & df$t_exposed <= time_keep + time - 1 & df$t_exposed!=-1 & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
-    keep$source_asymp_family_kids[i] = sum(df$family & !df$source_symp & df$t_exposed <= time_keep + time - 1 & df$t_exposed!=-1 & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
-    keep$source_asymp_family_staff[i] =sum(df$family_staff & !df$source_symp & df$t_exposed <= time_keep + time - 1 & df$t_exposed!=-1 & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
-    keep$adult[i] = sum(df$t_exposed!=-1 & df$adult & !df$family & df$t_exposed <= time_keep + time - 1)
-    keep$teacher[i] = sum(df$t_exposed!=-1 & df$adult & !df$family & df$t_exposed <= time_keep + time - 1 & df$class < 99)
-    keep$family[i] = sum(df$t_exposed!=-1 & df$family & df$t_exposed <= time_keep + time - 1 )
-    keep$staff_family[i] = sum(df$t_exposed!=-1 & df$family_staff & df$t_exposed <= time_keep + time - 1)
-    keep$children[i] = sum(df$t_exposed!=-1 & !df$adult & df$t_exposed <= time_keep + time - 1)
-    keep$children_tot[i] = sum(df$t_exposed!=-1 & !df$adult & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$school_adult_tot[i] = sum(df$t_exposed!=-1 & df$adult & !df$family & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$family_tot[i] = sum(df$t_exposed!=-1 & df$adult & df$family & df$t_exposed <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$symp[i] = sum(df$t_exposed!=-1 & df$symp==1 & df$t_exposed <= time_keep + time - 1, na.rm = T)
-    keep$symp_kids[i] = sum(df$t_exposed!=-1 & df$symp==1 & df$t_exposed <= time_keep + time - 1 & !df$adult, na.rm = T)
-    keep$asymp_kids[i] = sum(df$t_exposed!=-1 & df$symp==0 & df$t_exposed <= time_keep + time - 1 & !df$adult, na.rm = T)
+    keep$source_asymp[i] = sum(!df$source_symp & df$inf <= time_keep + time - 1 & df$t_inf!=0 & df$t_inf>=time_keep & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
+    keep$source_asymp_family_kids[i] = sum(df$family & !df$source_symp & df$inf <= time_keep + time - 1 & df$t_inf!=0 & df$t_inf>=time_keep & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
+    keep$source_asymp_family_staff[i] =sum(df$family_staff & !df$source_symp & df$inf <= time_keep + time - 1 & df$t_inf!=0 & df$t_inf>=time_keep & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
+    keep$adult[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$adult & !df$family & df$inf <= time_keep + time - 1)
+    keep$teacher[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$adult & !df$family & df$inf <= time_keep + time - 1 & df$class < 99)
+    keep$family[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$family & df$inf <= time_keep + time - 1 )
+    keep$staff_family[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$family_staff & df$inf <= time_keep + time - 1)
+    keep$children[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & !df$adult & df$inf <= time_keep + time - 1)
+    keep$children_tot[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & !df$adult & df$inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$school_adult_tot[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$adult & !df$family & df$inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$family_tot[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$adult & df$family & df$inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$symp[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$symp==1 & df$inf <= time_keep + time - 1, na.rm = T)
+    keep$symp_kids[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$symp==1 & df$inf <= time_keep + time - 1 & !df$adult, na.rm = T)
+    keep$asymp_kids[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$symp==0 & df$inf <= time_keep + time - 1 & !df$adult, na.rm = T)
     keep$sick_at_end[i] = sum(df$t_inf<=time_keep + time - 1 & df$t_end_inf > time_keep + time - 1)
-    keep$class[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & df$location == "Class")
-    keep$household[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & df$location == "Household")
-    keep$related_arts[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & df$location == "Related arts")
-    keep$child_care[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & df$location == "Child care")
-    keep$random[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & df$location == "Random contacts")
-    keep$random_staff[i] = sum(df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & df$location == "Staff contacts")
-    keep$num_classroom[i] = length(unique(df$class[df$t_exposed!=-1 & df$t_exposed <= time_keep + time - 1 & df$class < 99]))
+    keep$class[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & df$location == "Class")
+    keep$household[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & df$location == "Household")
+    keep$related_arts[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & df$location == "Related arts")
+    keep$child_care[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & df$location == "Child care")
+    keep$random[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & df$location == "Random contacts")
+    keep$random_staff[i] = sum(df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & df$location == "Staff contacts")
+    keep$num_classroom[i] = length(unique(df$class[df$t_inf!=0 & df$t_inf>=time_keep & df$inf <= time_keep + time - 1 & df$class < 99]))
     keep$clin_staff[i] = sum(!df$sub_clin & df$adult & !df$family, na.rm = T)
     keep$clin_students[i] = sum(!df$sub_clin & !df$adult, na.rm = T)
     keep$clin_family[i] = sum(!df$sub_clin & df$family, na.rm = T)
