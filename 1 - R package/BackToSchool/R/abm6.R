@@ -570,7 +570,7 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
   if(is.na(set)){
     #  set infectivity  parameters
     df.u$symp = rbinom(nrow(df.u), size = 1, prob = 1-df.u$p_asymp)
-    df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 0)
+    df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 1)
     df.u$t_symp = df.u$t_exposed + rgamma(nrow(df.u), shape = 5.8, scale=.95)
     val = rnorm(nrow(df.u), mean = 2, sd = .4)
     df.u$t_inf = ifelse(df.u$t_symp - val > df.u$t_exposed + 1, df.u$t_symp - val, df.u$t_exposed + 1)
@@ -583,7 +583,7 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
       df.u$t_exposed = 0
       df.u$t_inf = set
       df.u$symp = rbinom(nrow(df.u), size = 1, prob = 1-df.u$p_asymp)
-      df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 0)
+      df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 1)
       df.u$t_symp = df.u$t_inf + rnorm(nrow(df.u), mean = 2, sd = .4)
     }}
   
@@ -760,7 +760,7 @@ run_model = function(time = 30,
   }
   
   # quarantine
-  if(version ==1 | type=="base") df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
+  if(version == 1 | type=="base") df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
   if(!high_school){class_quarantine = expand_grid(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
                                                                                                                  !=99])) %>%
     mutate(t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
@@ -822,7 +822,6 @@ run_model = function(time = 30,
   } else if(test_type=="staff"){df$test_type = df$adult & !df$family
   } else if(test_type=="students"){df$test_type = !df$adult}
   class_test_ind = 0
-  
   df$uh.oh = 0
   
   #print(paste("start notification:", df$t_notify[df$start]))
@@ -909,7 +908,7 @@ run_model = function(time = 30,
         df$location[df$id%in%inf_vec] = "Household"
         
         # add to total # of infections from this person
-        df$tot_inf[df$id==a] = df$tot_inf[df$id==a] + sum(inf_vec>0)
+        df$tot_inf[df$id==a] = df$tot_inf[df$id==a] #+ sum(inf_vec>0)
         
         # flag people infected at this time step
         df$now = ifelse(df$id%in%inf_vec, T, df$now)
@@ -966,7 +965,7 @@ run_model = function(time = 30,
         inf_vec = c(class_trans, rand_trans, rand_staff_trans, specials_trans)
         
         # add to total # of infections from this person
-        df$tot_inf[df$id==a] = df$tot_inf[df$id==a] + sum(inf_vec>0)
+        df$tot_inf[df$id==a] = df$tot_inf[df$id==a] + sum(unique(inf_vec)>0)
         
         # flag people infected at this time step
         df$now = ifelse(df$id%in%inf_vec, T, df$now)
@@ -1005,7 +1004,7 @@ run_model = function(time = 30,
         inf_vec = c(care_trans)
         
         # add to total # of infections from this person
-        df$tot_inf[df$id==a] = df$tot_inf[df$id==a] + sum(inf_vec>0)
+        df$tot_inf[df$id==a] = df$tot_inf[df$id==a] #+ sum(inf_vec>0)
         
         # flag people infected at this time step
         df$now = ifelse(df$id%in%inf_vec, T, df$now)
@@ -1212,7 +1211,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
 #'
 #' @param out output from mult_runs
 #'
-#' @return calc summarizes results from multiple runsf
+#' @return calc summarizes results from multiple runs
 #'
 #' @export
 results = function(out){
