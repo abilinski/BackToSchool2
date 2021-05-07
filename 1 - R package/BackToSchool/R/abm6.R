@@ -789,13 +789,14 @@ run_model = function(time = 30,
     # set up vectors
     time_seed_inf = c(adult_times, child_times)
     id.samp = c(adults, kids)
+    df.temp = data.frame(id.samp, time_seed_inf) %>% arrange(id.samp)
     
   }
   
   # set actual seeds
   if(length(time_seed_inf)>0){
     df[df$id%in%id.samp,] = make_infected(df.u = df[df$id%in%id.samp,], days_inf = days_inf,
-                                          set = time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
+                                          set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
     df$start = df$id %in% id.samp
     
     df.u = df[df$id%in%id.samp,]
