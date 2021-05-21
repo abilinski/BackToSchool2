@@ -13,7 +13,7 @@ library(RColorBrewer)
 
 # set working directory
 wd = "~/Dropbox/Schools/Public code/0 - Synthetic Populations/"
-state = "Maryland"
+state = "Texas"
 setwd(paste0(wd, "0 - FRED data/", state))
 
 # read in data
@@ -89,7 +89,7 @@ save(synthpop_HS, file = paste0("synth", state, "_HS.RData"))
 #### MAKE FIGURE ####
 
 # make sibling heatmap
-map = data.frame(expand.grid(5:10, 5:10)) %>% rename("age1" = 1, "age2" = 2) %>% mutate(value = c())
+map = data.frame(expand.grid(14:17, 14:17)) %>% rename("age1" = 1, "age2" = 2) %>% mutate(value = c())
 for(i in 1:nrow(map)){
     map$value[i]=sum(r$HHs[grepl(map$age1[i], r$age_dist) & grepl(map$age2[i], r$age_dist)])/sum(r$HHs[grepl(map$age1[i], r$age_dist)])
 }
@@ -99,7 +99,7 @@ ggplot(map, aes(x = age1, y = age2)) +
     geom_tile(col = "black", fill = "white") + theme_minimal() + 
     #scale_fill_gradient(high = "#132B43", low = "#56B1F7", name = "") + 
     geom_text(aes(label = round(value, 2))) + theme(panel.grid = element_blank()) + 
-    scale_x_continuous(breaks = 5:10) + scale_y_continuous(breaks = 5:10) + 
+    scale_x_continuous(breaks = 14:17) + scale_y_continuous(breaks = 14:17) + 
     labs(x = "Age 1", y = "Age 2", title = "Fraction of households with a child of age 1\n containing a child of age 2")
 dev.off()
 

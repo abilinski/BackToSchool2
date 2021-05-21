@@ -58,7 +58,9 @@ mult_runs(
   start_type = "mix",
   bubble = F,
   include_weekends = T,
-  turnaround.time = 1
+  turnaround.time = 1,
+  test_start_day = 1,
+  version = 2
 )
 }
 \arguments{
@@ -155,6 +157,10 @@ mult_runs(
 \item{bubble}{whether out-of-school interactions occur with a 'bubble'; defaults to F}
 
 \item{turnaround.time}{test turnaround time, default = 1 day}
+
+\item{test_start_day}{day tests are implemented for weekly testing; defaults to 1 = Monday}
+
+\item{version}{v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2}
 
 \item{run_specials}{Whether special subjects are run; defaults to F}
 

@@ -11,6 +11,7 @@ run_model(
   test_days = "week",
   test_sens = 0.7,
   test_frac = 0.9,
+  test_start_day = 1,
   n_staff_contact = 0,
   n_HH = 0,
   n_start = 1,
@@ -33,6 +34,8 @@ run_model(
   bubble = F,
   include_weekends = T,
   turnaround.time = 1,
+  type = "base",
+  version = 2,
   df,
   sched
 )
@@ -47,6 +50,8 @@ run_model(
 \item{test_sens}{test sensitivity; defaults to 0.7}
 
 \item{test_frac}{fraction of school tested; defaults to 0.9}
+
+\item{test_start_day}{day tests are implemented for weekly testing; defaults to 1 = Monday}
 
 \item{n_staff_contact}{number of contacts a teacher/staff member has with other teachers/staff members; defaults to 1}
 
@@ -83,6 +88,10 @@ run_model(
 \item{include_weekends}{if TRUE excludes weekends from additional out-of-school mixing, defaults to F}
 
 \item{turnaround.time}{test turnaround time, default = 1 day}
+
+\item{type}{"base", "On/off", "A/B", "Remote"; defaults to "base"}
+
+\item{version}{v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2}
 
 \item{df}{school data frame from make_school()}
 

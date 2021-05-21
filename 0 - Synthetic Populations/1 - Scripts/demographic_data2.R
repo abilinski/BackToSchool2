@@ -38,14 +38,20 @@ q = p %>% group_by(sp_hh_id) %>% mutate(num_school = sum(school_id!="X"),
                                         age_cat = ifelse(age < 18, "<18", "65+"),
                                         age_cat = ifelse(age>=18 & age < 65, "18-64", age_cat),
                                         has_5_to_11 = sum(age>=5 & age<11),
-                                        has_over_65 = sum(age_cat=="65+"),)
+                                        has_50_to_65 = sum(age>=5 & age<11),
+                                        has_over_65 = sum(age_cat=="65+"))
 
 
 # take a look at parents
 q2 = q %>% ungroup() %>% filter(has_5_to_11>0) %>% group_by(sp_hh_id) %>% summarize(
   tot_adults = sum(age >= 18),
-  over_40 = sum(age > 40), 
+  over_40 = mean(age > 40), 
+  fifty_to_65 = mean(age >=50 & age < 65), 
+  sixtyfive_plus = mean(age >=65), 
+  
   old = sum(age_cat == "65+")) 
+
+q3 = q2 %>% summarize(mean(fifty_to_65), mean(sixtyfive_plus))
   
 q3 = q %>% filter(has_5_to_11 > 0)
 

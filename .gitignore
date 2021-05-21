@@ -1,0 +1,13 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# macOS Files
+.DS_Store
+
+# FRED files (too big)
+0 - Synthetic Populations/0 - FRED data/
+
+#Private files
+5 - Drafts/Private

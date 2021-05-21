@@ -9,7 +9,7 @@ library(devtools)
 install_github("abilinski/BacktoSchool2/1 - R package/BackToSchool")
 ```
   
-  <img src="https://github.com/abilinski/BackToSchool2/blob/master/5%20-%20Drafts/model2.png" width="800" class="center"/>
+  <img src="https://github.com/abilinski/BackToSchool2/blob/master/4%20-%20Output/Paper%201/Figures/Fig1.png" width="800" class="center"/>
 
 The model includes students (organized into households with siblings and parents).  Each elementary student is assigned to a classroom with a primary teacher.  There are other adults in the school, some of who circulate between classrooms (e.g. music, art, and special education) and some of whom do not (e.g. administrators, counselors, and pull-out special education).  In addition to in-classroom interactions, the user can specify The base model is parameterized to the population distribution of Maryland, but this can be modified by adjusting the input file passed to the synthpop variable in the function make_class().  Users pass parameters to the function mult_runs(), which will call the model multiple times, allowing full representation of model stochasticity.
  

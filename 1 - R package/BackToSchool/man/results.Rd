@@ -10,7 +10,7 @@ results(out)
 \item{out}{output from mult_runs}
 }
 \value{
-calc summarizes results from multiple runsf
+calc summarizes results from multiple runs
 }
 \description{
 Summarize multiple runs
