@@ -379,7 +379,7 @@ b4 = graph_sims4(bind_rows(sims, sims1), n_student = 1451, n_teacher = 124, ymax
 # Paragraph 1
 a[[4]] %>% filter(id2=="5-day" & strategy=="Classroom quarantine") %>% dplyr::select(mean.new)
 a[[4]] %>% filter(id2=="A/B" & strategy=="Classroom quarantine") %>% dplyr::select(mean.new)
-a[[4]] %>% filter(attack_level=="High") %>% dplyr::select(mean.new)
+max(a[[4]] %>% filter(attack_level=="High") %>% dplyr::select(mean.new))
 
 # Paragraph 2
 b[[4]] %>% filter(id2=="5-day" & strategy=="Classroom quarantine") %>% dplyr::select(mean.new)

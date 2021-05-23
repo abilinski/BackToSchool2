@@ -805,6 +805,7 @@ run_model = function(time = 30,
   }
   # compress if time_seed_inf is a vector
   if(start_type == "cont") time_seed_inf = 15 # start on Monday with testing
+  df.temp = data.frame(time_seed_inf) # backward compatibility
   df$start.time = time_seed_inf
   
   # test days
