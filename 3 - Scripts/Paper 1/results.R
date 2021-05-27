@@ -43,10 +43,11 @@ prep_sims = function(sims, name_val = ""){
            id2 = ifelse(id==2, "Cohorting", id2),
            id2 = ifelse(id==3, "1/2 class size", id2),
            id2 = ifelse(id==4, "A/B", id2),
-           id2 = ifelse(type=="A/B" & total_days==1, "A/B/C/D", id2),
-           id2 = ifelse(type=="On/off" & total_days==1, "On/off (1)", id2),
-           id2 = ifelse(type=="On/off" & total_days==2, "On/off (2)", id2),
-           id2 = factor(id2, levels = rev(c("A/B/C/D", "On/off (1)", "On/off (2)", "A/B", "1/2 class size", "Cohorting", "5-day"))),
+           id2 = ifelse(type=="A/B" & total_days=="1", "A/B/C/D", id2),
+           id2 = ifelse(type=="A/B" & total_days=="2.2", "A/B (v2)", id2),
+           id2 = ifelse(type=="On/off" & total_days=="1", "On/off (1)", id2),
+           id2 = ifelse(type=="On/off" & total_days=="2", "On/off (2)", id2),
+           id2 = factor(id2, levels = rev(c("A/B/C/D", "On/off (1)", "On/off (2)", "A/B", "A/B (v2)", "1/2 class size", "Cohorting", "5-day"))),
            strategy = factor(strategy, levels = c("Symptomatic isolation", "Classroom quarantine", "Teacher vaccination", "Weekly screening")))
   return(out)
 }
@@ -436,8 +437,8 @@ b[[4]] %>% ungroup() %>% summarize(out = mean(mean.school.infs.symp2/mean.new))
 a[[4]] %>% filter(id2=="5-day" & strategy=="Classroom quarantine") %>% dplyr::select(perc.zero, mt_5, mt_5_avg)
 b[[4]] %>% filter(id2=="5-day" & strategy=="Classroom quarantine") %>% dplyr::select(perc.zero, mt_5, mt_5_avg)
 
-#a[[4]] %>% filter(strategy=="Classroom quarantine") %>% dplyr::select(id2, attack_level, perc.zero, mt_5, mt_5_avg)
-#b[[4]] %>% filter(strategy=="Classroom quarantine") %>% dplyr::select(id2, attack_level, perc.zero, mt_5, mt_5_avg)
+a[[4]] %>% filter(strategy=="Classroom quarantine") %>% dplyr::select(id2, attack_level, perc.zero, mt_5, mt_5_avg)
+b[[4]] %>% filter(strategy=="Classroom quarantine") %>% dplyr::select(id2, attack_level, perc.zero, mt_5, mt_5_avg)
 
 #### Transmissions over the course of the semester ####
 f = a3[[2]] %>% filter(scenario!=3 & id_cat=="A/B") %>% group_by(adult_prob, attack_level) %>%

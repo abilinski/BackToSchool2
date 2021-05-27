@@ -17,10 +17,10 @@ wd = "/Users/abilinski/Desktop/4 - Output/Main2/"
 read.files = function(path){
   setwd(paste0(wd, path))
   
-  #df = data.frame(files = list.files()) %>% separate(files, sep = "_", remove = F, into = c("num", "date")) %>%
-  #  group_by(num) %>% summarize(files = files[length(files)]) %>% mutate(id = as.numeric(sub("results", "", num)))
-  #files = df$files
-  files = list.files()
+  df = data.frame(files = list.files()) %>% separate(files, sep = "_", remove = F, into = c("num", "date")) %>%
+    group_by(num) %>% summarize(files = files[length(files)]) %>% mutate(id = as.numeric(sub("results", "", num)))
+  files = df$files
+  #files = list.files()
 
   load(files[1])
   sims = matrix(0, length(files), ncol(out))
@@ -40,7 +40,7 @@ read.files = function(path){
 }
 
 setwd(wd)
-folders = c("Dynamic_Elem", "Dynamic_High")
+folders = c("HS_supp1", "HS_supp2", "HS_supp3")
 for(i in folders) {
   read.files(i)
   print(i); gc()

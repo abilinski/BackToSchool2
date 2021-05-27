@@ -252,8 +252,10 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            class_trans_prob = ifelse(adult & !family, class_trans_prob*teacher_trans, class_trans_prob),
            
            # susceptibility
-           susp = ifelse(adult, 1, child_susp),
-           susp = ifelse(adult & !family, teacher_susp, susp),
+           teacher_susp_val = rbinom(n, size = 1, prob = teacher_susp),
+           child_susp_val = rbinom(n, size = 1, prob = child_susp),
+           susp = ifelse(adult, 1, child_susp_val),
+           susp = ifelse(adult & !family, teacher_susp_val, susp),
            
            # note to self -- adjust this in parameters
            specials = ifelse(run_specials, id%in%(m:(m-14)), id%in%(m:(m-4)))) %>% ungroup()
