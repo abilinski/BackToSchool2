@@ -136,7 +136,7 @@ graph_sims2 = function(sims, title = ""){
            #tot = tot + rnorm(tot, mean = .05, sd = .1),
            #tot = ifelse(tot<0, 0, tot)
     ) %>% ungroup() %>% filter(tot < quant) %>%
-    filter(strategy%in%c("Symptomatic isolation", "Weekly screening") & 
+    filter(strategy%in%c("Classroom quarantine", "Weekly screening") & 
              id2 %in% c("5-day", "A/B")) %>%
     mutate(grp = paste(as.numeric(id),as.numeric(attack_level), strategy),
            id.strategy = factor(paste(id2, "\n", strategy, sep = "")),
@@ -149,9 +149,9 @@ graph_sims2 = function(sims, title = ""){
     facet_wrap(school~attack_level, scales = "free") + facet_grid(school~.) +
     theme_minimal(base_size = size) +
     theme_opts + labs(x = "", y = "", title = title) + 
-    scale_color_manual(name = "", values = pal, breaks = c("5-day\nSymptomatic isolation",
+    scale_color_manual(name = "", values = pal, breaks = c("5-day\nClassroom quarantine",
                                                            "5-day\nWeekly screening",
-                                                           "A/B\nSymptomatic isolation",
+                                                           "A/B\nClassroom quarantine",
                                                            "A/B\nWeekly screening"))
   return(out_fig)
 }
