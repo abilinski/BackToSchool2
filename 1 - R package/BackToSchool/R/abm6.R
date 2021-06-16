@@ -184,7 +184,7 @@ make_school = function(
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
-#' @param adult_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
+#' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
 #' @param disperse_transmission Whether transmission is overdispersed (vs. all have equal attack rate); default to T
 #' @param isolate Whether symptomatic individuals isolate when symptoms emerge; defaults to T
 #' @param dedens Whether dedensification measures reduce attack rate; defaults to F
@@ -1086,7 +1086,7 @@ run_model = function(time = 30,
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
-#' @param adult_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
+#' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
 #' @param disperse_transmission Whether transmission is overdispersed (vs. all have equal attack rate); default to T
 #' @param n_staff_contact number of contacts a teacher/staff member has with other teachers/staff members; defaults to 1
 #' @param n_HH number of households a household interacts with when not attending school; defaults to 0
@@ -1129,7 +1129,7 @@ run_model = function(time = 30,
 mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1,
                      rel_trans = 1/8, rel_trans_brief = 1/50, rel_trans_CC = 2, rel_trans_adult = 2, p_asymp_adult = .4, child_prob = 0.05, adult_prob = 0.01,
                      p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, p_subclin_adult = 0, p_subclin_child = 0,
-                     teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, adult_susp = 1,
+                     teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, family_susp = 1,
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
@@ -1158,7 +1158,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
                                rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
                                p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
-                               attack = attack, child_trans = child_trans, child_susp = child_susp, adult_susp = adult_susp,
+                               attack = attack, child_trans = child_trans, child_susp = child_susp, family_susp = family_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
                                isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class)
     

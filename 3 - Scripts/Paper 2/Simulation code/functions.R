@@ -11,12 +11,6 @@ library(foreach)
 library(doMC) 
 library(BackToSchool)
 
-# local
-wd = "/n/home00/abilinski/Schools/OutputES_7_May"
-
-# cluster
-setwd(wd)
-
 ####************************** FUNCTIONS TO VARY PARAM SETS **************************#### 
 
 #### RUN SINGLE ITERATION ####
@@ -35,7 +29,8 @@ sims = function(df, i, synthpop, class = NA){
                   p_subclin_adult = df$p_subclin_adult[i], p_subclin_child = df$p_subclin_child[i],
                   child_prob = df$child_prob[i], adult_prob = df$adult_prob[i], class = class,
                   test_days = df$test_days[i], test_type = df$test_type[i], rel_trans_HH = .04/df$attack[i], n_HH = df$n_HH[i],
-                  quarantine.length = df$quarantine.length[i], turnaround.time = df$turnaround.time[i], test_start_day = df$test_start_day[i]) %>%
+                  quarantine.length = df$quarantine.length[i], turnaround.time = df$turnaround.time[i], 
+                  test_start_day = df$test_start_day[i], family_susp = df$family_susp[i]) %>%
     mutate(id = df$scenario[i], i = i, sim = df$sim[i]) %>% left_join(df[i,], "i")
   
   save(out, file = paste0("results", i, "_", Sys.time(), ".RData"))
@@ -64,24 +59,25 @@ make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
                    p_asymp_adult = .4, p_asymp_child = .8,
                    p_subclin_adult = 0, p_subclin_child = 0,
                    n_staff_contact = 10, n_other_adults = 60, 
-                   test_sens = .9, test_frac = .9, 
+                   test_sens = .9, test_frac = .9, family_susp = 1,
                    rel_trans = 1/8, n_HH = 2, test_days = "week", test_type = "all", start_mult = 0,
                    scenario = c("Base case", "Limit contacts", "Reduced class size","A/B (2)"),
                    high_school = T, child_susp = 1, child_trans = 1, n_class = 63, prob = 0, disperse = T, 
-                   quarantine.length = 10, turnaround.time = 1, test_start_day = 1) {
+                   quarantine.length = 10, turnaround.time = 1, test_start_day = 1, test_quarantine = F) {
   
   # make a grid
   df = expand.grid(attack, disperse_transmission, teacher_susp, start_type, notify, test, 1,
                    dedens, n_start, mult_asymp, isolate, days_inf, time, n_contacts, n_staff_contact, n_other_adults,
                    test_sens, test_frac, rel_trans, n_HH, test_days, test_type, start_mult,
                    scenario, high_school, child_susp, child_trans, n_class, p_asymp_adult, p_asymp_child,
-                   p_subclin_adult, p_subclin_child, prob, quarantine.length, turnaround.time, test_start_day) 
+                   p_subclin_adult, p_subclin_child, prob, quarantine.length, turnaround.time, test_start_day, family_susp, test_quarantine) 
   
   names(df) = c("attack", "disperse_transmission", "teacher_susp", "start_type", "notify", "test", "n_tot",
                 "dedens", "n_start", "mult_asymp", "isolate", "days_inf", "time", "n_contacts", "n_staff_contact", "n_other_adults",
                 "test_sens", "test_frac", "rel_trans", "n_HH", "test_days", "test_type", "start_mult", 
                 "scenario", "high_school", "child_susp", "child_trans", "n_class", "p_asymp_adult", "p_asymp_child",
-                "p_subclin_adult", "p_subclin_child", "prob", "quarantine.length", "turnaround.time", "test_start_day")
+                "p_subclin_adult", "p_subclin_child", "prob", "quarantine.length", "turnaround.time", "test_start_day", "family_susp",
+                "test_quarantine")
   
   df = df %>%  filter(!(test & !notify)) %>%
    # filter(teacher_susp==1 | (notify == T & test == F)) %>%
@@ -104,3 +100,26 @@ make_df = function(attack = c(.01, .02, .03), disperse_transmission = c(F),
   
   return(df)
 }
+
+####************************** FUNCTIONS TO INPUT ARGUMENTS **************************#### 
+
+## pull data
+## Pull command arguments
+args=(commandArgs(TRUE))
+# args is now a list of character vectors
+# First check to see if arguments are passed.
+# Then cycle through each element of the list and evaluate the expressions.
+if (length (args) == 0) {
+  print("No arguments supplied.")
+  quit()   
+  
+} else {
+  for (i in 1:length(args)) {
+    eval (parse (text = args[[i]] ))
+  }
+  
+  test_q = as.logical(test_q)
+  notify_val = as.numeric(notify_val)
+  commandArgs <- function(...) c(test_q, notify_val)
+}
+
