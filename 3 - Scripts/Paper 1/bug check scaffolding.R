@@ -18,7 +18,7 @@ teacher_trans = 1; teacher_susp = 1; disperse_transmission = T; n_staff_contact 
 n_start = 1; time_seed_inf = NA; days_inf = 6; mult_asymp = 1; seed_asymp = F; isolate = T; dedens = 0; run_specials_now = F;
 time = 30; notify = F; test = F; test_sens =  .7; test_frac = .9; test_days = "week"; test_type = "all"; quarantine.length = 10; quarantine.grace = 3;
 type = "base"; total_days = 5; includeFamily = T; synthpop = synthpop; class = NA; n_class = 4; high_school = F; nper = 8; start_mult = 1; start_type = "mix";
-bubble = F; no_weekends = F; p_subclin_adult = 0; p_subclin_child = 0
+bubble = F; no_weekends = F; p_subclin_adult = 0; p_subclin_child = 0; version = 2
 
 
 N = df$n_tot[i]; n_contacts = df$n_contacts[i]; n_staff_contact = df$n_staff_contact[i]; 
@@ -31,7 +31,8 @@ days_inf = df$days_inf[i]; disperse_transmission = df$disperse_transmission[i]; 
 total_days = df$total_days[i];  teacher_susp = df$teacher_susp[i]; mult_asymp = df$mult_asymp[i]; 
 isolate = df$isolate[i]; test_sens = df$test_sens[i]; test_frac = df$test_frac[i]; 
 p_subclin_adult = df$p_subclin_adult[i]; p_subclin_child = df$p_subclin_child[i];
-test_days = df$test_days[i]; test_type = df$test_type[i]; rel_trans_HH = .04/df$attack[i]; n_HH = df$n_HH[i]
+test_days = df$test_days[i]; test_type = df$test_type[i]; rel_trans_HH = .04/df$attack[i]; n_HH = df$n_HH[i];
+test_start_day = df$test_start_day[i]; family_susp = df$family_susp[i]
 
 time = time; notify = notify; test = test; df = school; sched = sched;
 test_sens = test_sens; test_frac = test_frac; test_days = test_days; days_inf = days_inf;
