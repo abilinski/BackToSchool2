@@ -184,6 +184,7 @@ make_school = function(
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
+#' @param adult_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
 #' @param disperse_transmission Whether transmission is overdispersed (vs. all have equal attack rate); default to T
 #' @param isolate Whether symptomatic individuals isolate when symptoms emerge; defaults to T
 #' @param dedens Whether dedensification measures reduce attack rate; defaults to F
@@ -196,7 +197,7 @@ make_school = function(
 initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1,
                              rel_trans = 1/8, rel_trans_brief = 1/50, p_asymp_adult = .35,
                              p_asymp_child = .7, p_subclin_adult = 0, p_subclin_child  = 0,
-                             attack = .01, child_trans = 1, child_susp = .5,
+                             attack = .01, child_trans = 1, child_susp = .5, family_susp = 1,
                              teacher_trans = 1, teacher_susp = 1, disperse_transmission = T,
                              isolate = T, dedens = T, run_specials = F, start){
   
@@ -254,8 +255,10 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            # susceptibility
            teacher_susp_val = rbinom(n, size = 1, prob = teacher_susp),
            child_susp_val = rbinom(n, size = 1, prob = child_susp),
+           family_susp_val = rbinom(n, size = 1, prob = family_susp),
            susp = ifelse(adult, 1, child_susp_val),
            susp = ifelse(adult & !family, teacher_susp_val, susp),
+           susp = ifelse(family, family_susp_val, susp),
            
            # note to self -- adjust this in parameters
            specials = ifelse(run_specials, id%in%(m:(m-14)), id%in%(m:(m-4)))) %>% ungroup()
@@ -673,6 +676,7 @@ run_specials = function(a, df, specials){
 #' @param include_weekends if TRUE excludes weekends from additional out-of-school mixing, defaults to F
 #' @param turnaround.time test turnaround time, default = 1 day
 #' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
+#' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
 #' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param df school data frame from make_school()
 #' @param sched schedule data frame from make_schedule()
@@ -715,6 +719,7 @@ run_model = function(time = 30,
                      turnaround.time = 1,
                      type = "base",
                      version = 2,
+                     test_quarantine = F,
                      df, sched){
   
   #### SEED MODEL ####
@@ -826,6 +831,7 @@ run_model = function(time = 30,
   } else if(test_type=="staff"){df$test_type = df$adult & !df$family
   } else if(test_type=="students"){df$test_type = !df$adult}
   class_test_ind = 0
+  class_test_ind_q = 0
   df$uh.oh = 0
   
   #print(paste("start notification:", df$t_notify[df$start]))
@@ -837,7 +843,20 @@ run_model = function(time = 30,
     classes_out = class_quarantine[class_quarantine$t_notify > -1 & class_quarantine$t_notify <= t & t <= (class_quarantine$t_notify + quarantine.length-1),]
     
     # present
-    df$q_out = df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)
+    if(test_quarantine==T) {df$q_out = 0
+    df$test_type_q = !df$family
+    df$test_ct = df$test_ct + rbinom(nrow(df), size = 1, prob = df$present*test_frac*as.numeric(df$test_type_q))
+    df$test_q = rbinom(nrow(df), size = 1, prob = test_sens*test_frac*as.numeric(df$test_type_q))
+    df$t_end_inf = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
+    df$t_notify = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
+    df$detected = ifelse(df$inf & df$test_q & df$present, 1, df$detected)
+    df$detected_c = ifelse(df$inf & df$test_q & df$present, 1, df$detected)
+    class_test_ind_q = class_test_ind_q + length(unique(df$class[df$test_type_q & df$present & !df$quarantined]))
+    
+    }else{df$q_out = df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)}
+    
+    
+    
     df$present = sched$present[sched$t==t] & !df$q_out & !df$HH_id%in%df$HH_id[df$q_out]
     if(high_school & nrow(classes_out)>0){
       df$nq = !unlist(lapply(classes.ind, function(a) sum(a %in% classes_out$class)>0))
@@ -1044,6 +1063,8 @@ run_model = function(time = 30,
   #print(df$id[df$t_exposed!=-1 & df$class==df$class[df$start]])
   #print(sum(df$t_exposed!=-1))
   df$class_test_ind = class_test_ind
+  df$class_test_ind_q = class_test_ind
+  
   return(df) #, time_seed_inf, class_quarantine, mat))
 }
 
@@ -1065,6 +1086,7 @@ run_model = function(time = 30,
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
+#' @param adult_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
 #' @param disperse_transmission Whether transmission is overdispersed (vs. all have equal attack rate); default to T
 #' @param n_staff_contact number of contacts a teacher/staff member has with other teachers/staff members; defaults to 1
 #' @param n_HH number of households a household interacts with when not attending school; defaults to 0
@@ -1095,6 +1117,7 @@ run_model = function(time = 30,
 #' @param quarantine.grace length of grace period after which a quarantined class returns not to be "re-quarantined"
 #' @param turnaround.time test turnaround time, default = 1 day
 #' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
+#' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
 #' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param total_days number of days in school; defaults to 5
 #' @param num_adults number of adults interacting with children, defaults to 2
@@ -1106,11 +1129,11 @@ run_model = function(time = 30,
 mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1,
                      rel_trans = 1/8, rel_trans_brief = 1/50, rel_trans_CC = 2, rel_trans_adult = 2, p_asymp_adult = .4, child_prob = 0.05, adult_prob = 0.01,
                      p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, p_subclin_adult = 0, p_subclin_child = 0,
-                     teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2,
+                     teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, adult_susp = 1,
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
-                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, version = 2){
+                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, version = 2){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
@@ -1135,7 +1158,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
                                rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
                                p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
-                               attack = attack, child_trans = child_trans, child_susp = child_susp,
+                               attack = attack, child_trans = child_trans, child_susp = child_susp, adult_susp = adult_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
                                isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class)
     
@@ -1149,20 +1172,38 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    n_start = n_start, time_seed_inf = time_seed_inf, high_school = high_school, nper = nper, 
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
-                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time, test_start_day = test_start_day, type = type, version = version)
+                   num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time,
+                   test_start_day = test_start_day, type = type, test_quarantine = test_quarantine, version = version)
     
     time_keep = df$start.time[1]
     
     # store output
     keep$all[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1)
     keep$tot[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$from_kids[i] = 0#sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]) & !df$adult[df$source])
+    keep$all_1[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 1)
+    keep$tot_1[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$detected_1[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==1 & df$t_inf <= 1 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$all_8[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 8)
+    keep$tot_8[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 8 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$detected_8[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==8 & df$t_inf <= 8 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$all_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15)
+    keep$tot_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$detected_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==15 & df$t_inf <= 15 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$all_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22)
+    keep$tot_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$detected_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==22 & df$t_inf <= 22 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$all_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29)
+    keep$tot_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$detected_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==29 & df$t_inf <= 29 & !df$HH_id%in%c(df$HH_id[df$start]))
+    keep$from_kids[i] = 0 #sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]) & !df$adult[df$source])
     keep$R0[i] = sum(df$tot_inf[df$start])
     keep$Rt[i] =  mean(df$tot_inf[df$t_inf!=0 & df$t_end_inf_home>=time_keep], na.rm = T)
     keep$avg_infs[i] = mean(df$tot_inf[df$t_inf!=0 & df$t_end_inf_home>=time_keep & !df$start])
     keep$start[i] = sum(df$start)
     keep$class_test_ind[i] = df$class_test_ind[1]
+    keep$class_test_ind_q[i] = df$class_test_ind_q[1]
     keep$detected[i] = sum(df$detected)
+    keep$detected_c[i] = sum(df$detected_c)
     keep$detected_staff[i] = sum(df$detected[df$adult])
     keep$detected_students[i] = sum(df$detected[!df$adult])
     keep$detected_staff_subclin[i] = sum(df$detected[df$adult & df$sub_clin], na.rm = T)
