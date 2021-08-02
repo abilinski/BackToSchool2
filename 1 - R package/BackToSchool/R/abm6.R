@@ -187,8 +187,10 @@ make_school = function(
 #' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
 #' @param disperse_transmission Whether transmission is overdispersed (vs. all have equal attack rate); default to T
 #' @param isolate Whether symptomatic individuals isolate when symptoms emerge; defaults to T
+#' @param notify Whether classrooms are notified following a positive test; defaults to T
 #' @param dedens Whether dedensification measures reduce attack rate; defaults to F
 #' @param run_specials Whether special subjects are run; defaults to F
+#' @param vax_eff Vaccine efficacy, defaults to 0.9
 #' @param start Data frame from make_class()
 #'
 #' @return out data frame of child and teacher attributes.
@@ -199,7 +201,7 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
                              p_asymp_child = .7, p_subclin_adult = 0, p_subclin_child  = 0,
                              attack = .01, child_trans = 1, child_susp = .5, family_susp = 1,
                              teacher_trans = 1, teacher_susp = 1, disperse_transmission = T,
-                             isolate = T, dedens = T, run_specials = F, start){
+                             isolate = T, dedens = T, run_specials = F, start, vax_eff = .9, notify = T){
   
   # make non-teacher adults
   n = nrow(start)
@@ -222,9 +224,12 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            c_trace_start = -1,
            tot_inf = 0,
            detected = 0,
+           detected_q = 0,
+           detected_q_start = 0,
            quarantined = 0,
            quarantined2 = 0,
            test_ct = 0,
+           test_ct_q = 0,
            n_contact = n_contacts,
            n_contact_brief = n_contacts_brief,
            relative_trans = rel_trans,
@@ -245,6 +250,7 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            
            # isolation
            isolate = rbinom(n, size = 1, prob = isolate),
+           notify = notify,
            
            # transmission probability
            class_trans_prob = attack,
@@ -253,12 +259,22 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            class_trans_prob = ifelse(adult & !family, class_trans_prob*teacher_trans, class_trans_prob),
            
            # susceptibility
-           teacher_susp_val = rbinom(n, size = 1, prob = teacher_susp),
-           child_susp_val = rbinom(n, size = 1, prob = child_susp),
-           family_susp_val = rbinom(n, size = 1, prob = family_susp),
-           susp = ifelse(adult, 1, child_susp_val),
-           susp = ifelse(adult & !family, teacher_susp_val, susp),
-           susp = ifelse(family, family_susp_val, susp),
+           child_susp_val = child_susp,
+           teacher_susp_val = teacher_susp,
+           family_susp_val = family_susp,
+           vax_eff_val = vax_eff,
+           
+           vacc = ifelse(adult, 1, rbinom(n, size = 1, prob = child_susp_val)),
+           vacc = ifelse(adult & !family, rbinom(n, size = 1, prob = teacher_susp_val), vacc),
+           vacc = ifelse(family, rbinom(n, size = 1, prob = family_susp_val), vacc),
+           
+           susp = ifelse(vacc==0, 1, rbinom(n, size = 1, prob = 1-vax_eff_val)),
+           
+           # PATCH FOR ELEMENTARY SCHOOLERS UNVACCED
+           # WILL NOT WORK WITH THEIR VACCINATIONS
+           # FIX WITH BETTER VERSION
+           temp_trans_val = child_trans,
+           vacc = ifelse(temp_trans_val<1 & !adult, 0, vacc),
            
            # note to self -- adjust this in parameters
            specials = ifelse(run_specials, id%in%(m:(m-14)), id%in%(m:(m-4)))) %>% ungroup()
@@ -603,8 +619,8 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
   # add end time
   df.u$t_end_inf_home = df.u$t_inf +
     rlnorm(nrow(df.u), meanlog = log(days_inf)-log((days_inf^2 + 2)/days_inf^2)/2, sdlog = sqrt(log((days_inf^2 + 2)/days_inf^2)))
-  df.u$t_end_inf = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate, df.u$t_symp, df.u$t_end_inf_home)
-  df.u$t_notify = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate, round(df.u$t_symp + turnaround.time), -17)
+  df.u$t_end_inf = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate & (round(df.u$t_symp)<df.u$t_end_inf_home), round(df.u$t_symp), df.u$t_end_inf_home) 
+  df.u$t_notify = ifelse(df.u$symp==1 & !df.u$sub_clin & df.u$isolate & df.u$notify, round(df.u$t_symp + turnaround.time), -17)
   
   return(df.u)
 }
@@ -677,6 +693,7 @@ run_specials = function(a, df, specials){
 #' @param turnaround.time test turnaround time, default = 1 day
 #' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
 #' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
+#' @param surveillance whether surveillance is underway; defaults to F
 #' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param df school data frame from make_school()
 #' @param sched schedule data frame from make_schedule()
@@ -720,6 +737,7 @@ run_model = function(time = 30,
                      type = "base",
                      version = 2,
                      test_quarantine = F,
+                     surveillance = F,
                      df, sched){
   
   #### SEED MODEL ####
@@ -769,7 +787,7 @@ run_model = function(time = 30,
   # quarantine
   if(version == 1 | type=="base") df$group[df$group!=99] = 0  # make sure quarantine doesn't go by group
   if(!high_school){class_quarantine = expand_grid(class = unique(df$class[df$class!=99]), group = unique(df$group[df$group
-                                                                                                                 !=99])) %>%
+                                                                                                                  !=99])) %>%
     mutate(t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length, num = 0)
   }else{class_quarantine = data.frame(class = unique(hs.classes$class), t_notify = -quarantine.grace-quarantine.length, hold = -quarantine.grace-quarantine.length)}
   mat = matrix(NA, nrow = max(df$id), ncol = time)
@@ -795,21 +813,25 @@ run_model = function(time = 30,
     
     # set up vectors
     time_seed_inf = c(adult_times, child_times)
+    
     id.samp = c(adults, kids)
-    df.temp = data.frame(id.samp, time_seed_inf) %>% arrange(id.samp)
+    df.temp = data.frame(id.samp, time_seed_inf) %>% arrange(id.samp) %>%
+      left_join(df, c("id.samp" = "id")) %>% filter(susp!=0)
     
   }
   
   # set actual seeds
-  if(length(time_seed_inf)>0){
-    df[df$id%in%id.samp,] = make_infected(df.u = df[df$id%in%id.samp,], days_inf = days_inf,
-                                          set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
-    df$start = df$id %in% id.samp
+  if(nrow(df.temp)>0){
+    df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
+                                                  set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
+    df$start = df$id %in% df.temp$id.samp
     
-    df.u = df[df$id%in%id.samp,]
+    # now below
+    #df.u = df[df$id%in% df.temp$id.samp,]
     # set up notification
-    if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
+    #if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
   }
+  
   # compress if time_seed_inf is a vector
   if(start_type == "cont") time_seed_inf = 15 # start on Monday with testing
   df.temp = data.frame(time_seed_inf) # backward compatibility
@@ -825,13 +847,18 @@ run_model = function(time = 30,
     } else{
       testing_days = c(seq(4, (time+15), by = 7), seq(1, (time+15), by = 7))
     }}
+  df$switch = 0
+  df$temp_switch = 0
+  
+  #print(testing_days)
   
   # testing
-  if(test_type=="all"){ df$test_type = !df$family
+  if(test_type=="all"){ df$test_type = !df$family & (df$vacc!=1 | test_frac>=0.7)
   } else if(test_type=="staff"){df$test_type = df$adult & !df$family
   } else if(test_type=="students"){df$test_type = !df$adult}
   class_test_ind = 0
   class_test_ind_q = 0
+  test_frac_orig = test_frac
   df$uh.oh = 0
   
   #print(paste("start notification:", df$t_notify[df$start]))
@@ -841,23 +868,31 @@ run_model = function(time = 30,
     
     # class quarantines
     classes_out = class_quarantine[class_quarantine$t_notify > -1 & class_quarantine$t_notify <= t & t <= (class_quarantine$t_notify + quarantine.length-1),]
+    df$present = sched$present[sched$t==t]
+    df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf > t
+    df$symp_now = !df$family & df$symp==1 & !df$sub_clin & round(df$t_symp) <= t & df$t_end_inf > t
+    #print(paste("Time:", t, sched$day[sched$t==t][1]))
+    #print(classes_out)
     
     # present
-    if(test_quarantine==T) {df$q_out = 0
-    df$test_type_q = !df$family
-    df$test_ct = df$test_ct + rbinom(nrow(df), size = 1, prob = df$present*test_frac*as.numeric(df$test_type_q))
-    df$test_q = rbinom(nrow(df), size = 1, prob = test_sens*test_frac*as.numeric(df$test_type_q))
-    df$t_end_inf = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
-    df$t_notify = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
-    df$detected = ifelse(df$inf & df$test_q & df$present, 1, df$detected)
-    df$detected_c = ifelse(df$inf & df$test_q & df$present, 1, df$detected)
-    class_test_ind_q = class_test_ind_q + length(unique(df$class[df$test_type_q & df$present & !df$quarantined]))
+    if(test_quarantine==T) {
+      df$test_type_q = !df$family & ((df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)) | df$symp_now) #& df$vacc!=1 
+      df$test_ct_q = df$test_ct_q + df$present*as.numeric(df$test_type_q)
+      df$test_q = rbinom(nrow(df), size = 1, prob = 0.8*df$present*df$test_type_q)
+      df$t_end_inf = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
+      df$t_notify = ifelse(df$inf & df$test_q & df$present, t+1, df$t_notify)
+      df$detected = ifelse(df$inf & df$test_q & df$present, 1, df$detected)
+      df$detected_q = ifelse(df$inf & df$test_q & df$present, 1, df$detected_q)
+      df$detected_q_start = ifelse(df$inf & df$test_q & df$present & df$start, 1, df$detected_q_start)
+      class_test_ind_q = class_test_ind_q + length(unique(df$class[df$test_type_q & df$present & !df$quarantined]))
+      df$q_out = df$detected & df$inf
+    }else{df$q_out = df$vacc!=1 & df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)}
     
-    }else{df$q_out = df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)}
-    
-    
-    
+    # re-estimated who is present
     df$present = sched$present[sched$t==t] & !df$q_out & !df$HH_id%in%df$HH_id[df$q_out]
+    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home > t & !df$family
+    df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf > t
+    
     if(high_school & nrow(classes_out)>0){
       df$nq = !unlist(lapply(classes.ind, function(a) sum(a %in% classes_out$class)>0))
       df$present =  sched$present[sched$t==t] & df$nq
@@ -865,15 +900,15 @@ run_model = function(time = 30,
     df$not_inf = df$t_exposed==-1 | df$t_exposed > t # if exposed from community, can be exposed earlier
     df$present_susp = df$present & df$not_inf
     df$quarantined = df$quarantined + as.numeric(df$q_out & sched$present[sched$t==t])
-    df$quarantined2 = df$quarantined + as.numeric(df$q_out)
+    #print(sum(as.numeric(df$q_out)))
+    #print(sum(as.numeric(df$q_out & sched$present[sched$t==t])))
+    
+    df$quarantined2 = df$quarantined2 + as.numeric(df$q_out)
     df$quarantined_now = df$q_out & sched$present[sched$t==t]
     
     # check who is present
     mat[,(t-time_seed_inf+1)] = df$present
     
-    # infectious
-    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home >= t & !df$family
-    df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf >= t
     
     # infectious and at school
     df$trans_now = df$present & df$inf & !df$family
@@ -907,13 +942,40 @@ run_model = function(time = 30,
       df$test_ct = df$test_ct + rbinom(nrow(df), size = 1, prob = df$present*test_frac*as.numeric(df$test_type))
       df$test = rbinom(nrow(df), size = 1, prob = test_sens*test_frac*as.numeric(df$test_type))
       df$t_end_inf = ifelse(df$inf & df$test & df$present, t, df$t_end_inf)
-      df$t_notify = ifelse(df$inf & df$test & df$present, t, df$t_end_inf)
+      df$t_notify = ifelse(df$inf & df$test & df$present, t+1, df$t_notify)
       df$detected = ifelse(df$inf & df$test & df$present, 1, df$detected)
       class_test_ind = class_test_ind + length(unique(df$class[df$test_type & df$present & !df$quarantined]))
       
-      # set up notification
-      df.u = df %>% filter(inf & test)
-      if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
+      #print(paste("Time:", t))
+      #print(sum(df$test))
+      #print(sum(df$inf & df$test & df$present))
+      #print(df$id[df$inf & df$test & df$present])
+      #print(df$class[df$inf & df$test & df$present])
+      #print(df$family[df$inf & df$test & df$present])
+      
+      if(surveillance==T & sum(df$inf & df$test & df$present)>=1){
+        #print("switch to reg")
+        test_frac = 0.9
+        testing_days = c(testing_days, t+1)
+        surveillance = F
+        df$switch = t
+      }
+      
+      if(surveillance==F & sum(df$inf & df$test & df$present)==0 & (t-1)%in%testing_days){
+        #print("switch to surv")
+        test_frac = test_frac_orig
+        surveillance = T
+        df$switch = 0
+        df$temp_switch = df$temp_switch + 1
+      }
+      
+      #print(surveillance)
+      #print(df$switch[1])
+      #print(testing_days)
+      #print(test_frac)
+      # set up notification -- now below
+      #df.u = df %>% filter(inf & test)
+      #if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
       
     }
     
@@ -1046,16 +1108,25 @@ run_model = function(time = 30,
       
       df$t_exposed[df$now] = t
       df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
-      df.u = df[df$now,]
-      
-      # set up notification
-      if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
-      df$uh.oh = df$uh.oh + sum(df$source[df$now]%in%(df$id[df$class%in%classes_out$class]) & df$location[df$now]!="Household")>0
       #print("New exposures:")
       #print(df %>% filter(now) %>% arrange(source) %>% select(id, HH_id, class, group, adult, family, source, location, symp))
     }
     
+    # round values
+    df$t_notify = round(df$t_notify)
+    
+    if(notify & sum(df$t_notify==(t+1) & !df$family)>0){
+      df.u = df %>% filter(t_notify==(t+1) & !family)
+      #print("Quarantined: "); print(df.u %>% dplyr::select(adult, family, class, symp, sub_clin, t_notify, start))
+      
+      # set up notification
+      class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)
+      df$uh.oh = df$uh.oh + sum(df$source[df$now]%in%(df$id[df$class%in%classes_out$class]) & df$location[df$now]!="Household")>0
+      
+    }
     #print(t); print(class_quarantine)
+    #print(df %>% #filter(!adult) %>% 
+    #        group_by(class) %>% summarize(mean(quarantined), sum(quarantined)))
     #if(sum(class_quarantine$t_notify!=-1)>0) print(class_quarantine)
     
   }
@@ -1064,7 +1135,8 @@ run_model = function(time = 30,
   #print(sum(df$t_exposed!=-1))
   df$class_test_ind = class_test_ind
   df$class_test_ind_q = class_test_ind
-  
+  df$surveillance = surveillance
+  #print(sum(class_quarantine$t_notify>-1))#; print(tail(class_quarantine))
   return(df) #, time_seed_inf, class_quarantine, mat))
 }
 
@@ -1120,8 +1192,9 @@ run_model = function(time = 30,
 #' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
 #' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param total_days number of days in school; defaults to 5
+#' @param vax_eff Vaccine efficacy, defaults to 0.9
 #' @param num_adults number of adults interacting with children, defaults to 2
-
+#' @param surveillance whether surveillance is underway; defaults to F
 #' @param includeFamily whether to include family, default = FALSE
 #' @param synthpop synthetic population; defaults to synthMaryland
 #'
@@ -1133,14 +1206,14 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
-                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, version = 2){
+                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, vax_eff = 0.9, surveillance = F, version = 2){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
                     adult = numeric(N), teacher = numeric(N), family = numeric(N), staff_family = numeric(N), children = numeric(N), children_tot = numeric(N), family_tot = numeric(N),
                     adult_tot = numeric(N), attack = numeric(N), class = numeric(N), household = numeric(N), detected = numeric(N),
                     detected_staff = numeric(N), detected_students = numeric(N), detected_staff_subclin = numeric(N), detected_students_subclin = numeric(N),
-                    symp = numeric(N), symp_kids = numeric(N), avg_infs = numeric(N), class_test_ind = numeric(N),
+                    symp = numeric(N), symp_kids = numeric(N), avg_infs = numeric(N), class_test_ind = numeric(N), test_qs = numeric(N),
                     quarantine_check = numeric(N), quarantined = numeric(N), quarantined_tot = numeric(N), quarantined_kids = numeric(N), from_kids = numeric(N), related_arts = numeric(N), 
                     child_care = numeric(N), random = numeric(N), random_staff = numeric(N), num_classroom = numeric(N), avg_class = numeric(N), clin_staff = numeric(N), clin_students = numeric(N), clin_family = numeric(N))
   
@@ -1160,62 +1233,112 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                                p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
                                attack = attack, child_trans = child_trans, child_susp = child_susp, family_susp = family_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
-                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class)
+                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify)
     
     ## make schedule
     sched = make_schedule(time = time + 15, df = school, type = type, total_days = total_days)
     
     ## run model
-    df = run_model(time = time, notify = notify, test = test, df = school, sched = sched,
+    df = run_model(time = time, notify = notify, test = test, df = school, sched = sched, 
                    test_sens = test_sens, test_frac = test_frac, test_days = test_days, days_inf = days_inf,
                    mult_asymp = mult_asymp, seed_asymp = seed_asymp, n_HH = n_HH, n_staff_contact = n_staff_contact,
                    n_start = n_start, time_seed_inf = time_seed_inf, high_school = high_school, nper = nper, 
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
                    num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time,
-                   test_start_day = test_start_day, type = type, test_quarantine = test_quarantine, version = version)
+                   test_start_day = test_start_day, type = type, test_quarantine = test_quarantine, version = version, surveillance = surveillance)
     
     time_keep = df$start.time[1]
     
     # store output
     keep$all[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1)
     keep$tot[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$all_1[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 1)
-    keep$tot_1[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$detected_1[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==1 & df$t_inf <= 1 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$all_8[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 8)
-    keep$tot_8[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 8 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$detected_8[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==8 & df$t_inf <= 8 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$all_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15)
-    keep$tot_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$detected_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==15 & df$t_inf <= 15 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$all_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22)
-    keep$tot_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$detected_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==22 & df$t_inf <= 22 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$all_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29)
-    keep$tot_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & !df$HH_id%in%c(df$HH_id[df$start]))
-    keep$detected_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==29 & df$t_inf <= 29 & !df$HH_id%in%c(df$HH_id[df$start]))
+    
+    keep$all_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & df$t_end_inf_home > 15)
+    keep$tot_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 15)
+    keep$detected_15[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==15)
+    
+    keep$all_15_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & df$t_end_inf_home > 15)
+    keep$tot_15_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 15)
+    keep$detected_15_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==15)
+    
+    keep$all_15_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & df$t_end_inf_home > 15)
+    keep$tot_15_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 15 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 15)
+    keep$detected_15_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==15)
+    
+    
+    keep$all_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & df$t_end_inf_home > 22)
+    keep$tot_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 22)
+    keep$detected_22[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==22)
+    
+    keep$all_22_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & df$t_end_inf_home > 22)
+    keep$tot_22_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 22)
+    keep$detected_22_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==22)
+    
+    keep$all_22_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & df$t_end_inf_home > 22)
+    keep$tot_22_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 22 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 22)
+    keep$detected_22_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==22)
+    
+    keep$all_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & df$t_end_inf_home > 29)
+    keep$tot_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 29)
+    keep$detected_29[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==29)
+    
+    keep$all_29_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & df$t_end_inf_home > 29)
+    keep$tot_29_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 29)
+    keep$detected_29_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==29)
+    
+    keep$all_29_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & df$t_end_inf_home > 29)
+    keep$tot_29_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 29 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 29)
+    keep$detected_29_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==29)
+    
+    keep$all_36[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 36 & df$t_end_inf_home > 36)
+    keep$tot_36[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 36 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 36)
+    keep$detected_36[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==36)
+    
+    keep$all_36_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 36 & df$t_end_inf_home > 36)
+    keep$tot_36_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 36 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 36)
+    keep$detected_36_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==36)
+    
+    keep$all_36_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 36 & df$t_end_inf_home > 36)
+    keep$tot_36_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 36 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 36)
+    keep$detected_36_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==36)
+    
+    keep$all_43[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 43 & df$t_end_inf_home > 43)
+    keep$tot_43[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 43 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 43)
+    keep$detected_43[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==43)
+    
+    keep$all_43_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 43 & df$t_end_inf_home > 43)
+    keep$tot_43_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 43 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 43)
+    keep$detected_43_kids[i] = sum(!df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==43)
+    
+    keep$all_43_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 43  & df$t_end_inf_home > 43)
+    keep$tot_43_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= 43 & !df$HH_id%in%c(df$HH_id[df$start]) & df$t_end_inf_home > 43)
+    keep$detected_43_staff[i] = sum(df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$detected & df$t_end_inf==43)
+    
     keep$from_kids[i] = 0 #sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & !df$HH_id%in%c(df$HH_id[df$start]) & !df$adult[df$source])
     keep$R0[i] = sum(df$tot_inf[df$start])
     keep$Rt[i] =  mean(df$tot_inf[df$t_inf!=0 & df$t_end_inf_home>=time_keep], na.rm = T)
     keep$avg_infs[i] = mean(df$tot_inf[df$t_inf!=0 & df$t_end_inf_home>=time_keep & !df$start])
-    keep$start[i] = sum(df$start)
+    keep$start[i] = sum(df$start & df$t_end_inf_home>=time_keep & df$t_inf < time_keep+time - 1)
     keep$class_test_ind[i] = df$class_test_ind[1]
     keep$class_test_ind_q[i] = df$class_test_ind_q[1]
+    keep$test_qs[i] = sum(df$test_ct_q)
     keep$detected[i] = sum(df$detected)
-    keep$detected_c[i] = sum(df$detected_c)
+    keep$detected_q[i] = sum(df$detected_q)
+    keep$detected_q_start[i] = sum(df$detected_q_start)
     keep$detected_staff[i] = sum(df$detected[df$adult])
     keep$detected_students[i] = sum(df$detected[!df$adult])
     keep$detected_staff_subclin[i] = sum(df$detected[df$adult & df$sub_clin], na.rm = T)
     keep$detected_students_subclin[i] = sum(df$detected[!df$adult & df$sub_clin], na.rm = T)
-    keep$quarantine_check[i] = (df$uh.oh[1])
+    keep$quarantine_check[i] = max(df$t_end_inf-df$t_end_inf_home, na.rm = T)#(df$uh.oh[1])
     keep$avg_class[i] = unlist(df %>% filter(t_exposed!=-1 & t_exposed <= time_keep + time - 1 & class!=99) %>% group_by(class) %>% 
-      summarize(num = length(class)) %>% ungroup() %>% summarize(mean(num, na.rm = T)))
+                                 summarize(num = length(class)) %>% ungroup() %>% summarize(mean(num, na.rm = T)))
     keep$quarantined[i] = sum(df$quarantined)
     keep$quarantined2[i] = sum(df$quarantined2)
     keep$quarantined_kids[i] = sum(df$quarantined[!df$adult])#length(unique(df$id[df$quarantined>0])) #sum(df$quarantined[!df$adult])
-    keep$start_adult[i] = sum(df$adult & df$start)
-    keep$start_family[i] = sum(df$family & df$start)
+    keep$start_adult[i] = sum(df$adult & df$start & df$t_end_inf_home>=time_keep)
+    keep$start_family[i] = sum(df$family & df$start & df$t_end_inf_home>=time_keep)
+    keep$start_kids[i] = sum(!df$adult & df$start & df$t_end_inf_home>=time_keep)
     keep$start_symp[i] = sum(df$symp[df$start], na.rm = T)
     keep$source_asymp[i] = sum(!df$source_symp & df$t_inf <= time_keep + time - 1 & df$t_inf!=0 & df$t_end_inf_home>=time_keep & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
     keep$source_asymp_family_kids[i] = sum(df$family & !df$source_symp & df$t_inf <= time_keep + time - 1 & df$t_inf!=0 & df$t_end_inf_home>=time_keep & !df$HH_id%in%c(df$HH_id[df$start]), na.rm = T)
@@ -1239,9 +1362,21 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     keep$random[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & df$location == "Random contacts")
     keep$random_staff[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & df$location == "Staff contacts")
     keep$num_classroom[i] = length(unique(df$class[df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & df$class < 99]))
-    keep$clin_staff[i] = sum(!df$sub_clin & df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
-    keep$clin_students[i] = sum(!df$sub_clin & !df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
-    keep$clin_family[i] = sum(!df$sub_clin & df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
+    keep$clin_staff[i] = sum(df$t_notify>=15 & df$symp & !df$sub_clin & df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
+    keep$clin_students[i] = sum(df$t_notify>=15 & df$symp & !df$sub_clin & !df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
+    keep$clin_family[i] = sum(df$t_notify>=15 & df$symp & !df$sub_clin & df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
+    keep$clin_staff2[i] = sum(df$t_notify>=15 & df$symp & !df$sub_clin & df$adult & !df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & df$t_notify <= time_keep + time - 1, na.rm = T)
+    keep$clin_students2[i] = sum(df$t_notify>=15 & df$symp & !df$sub_clin & !df$adult & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & df$t_notify <= time_keep + time - 1, na.rm = T)
+    keep$clin_family2[i] = sum(df$t_notify>=15 & df$symp & !df$sub_clin & df$family & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1 & df$t_notify <= time_keep + time - 1, na.rm = T)
+    keep$notify_staff[i] = sum(df$t_notify>=15 & df$adult & !df$family & df$t_notify <= time_keep + time - 1, na.rm = T)
+    keep$notify_students[i] = sum(df$t_notify>=15 & !df$adult & df$t_notify <= time_keep + time - 1, na.rm = T)
+    keep$notify_family[i] = sum(df$t_notify>=15 & df$family & df$t_notify <= time_keep + time - 1, na.rm = T)
+    keep$notify_staff2[i] = sum(df$t_notify>=15 & df$adult & !df$family & df$t_notify <= time_keep + time - 1 & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
+    keep$notify_students2[i] = sum(df$t_notify>=15 & !df$adult & df$t_notify <= time_keep + time - 1 & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
+    keep$notify_family2[i] = sum(df$t_notify>=15 & df$family & df$t_notify <= time_keep + time - 1 & df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1, na.rm = T)
+    keep$surveillance[i] = df$surveillance[1]
+    keep$switch[i] = df$switch[1]
+    keep$temp_switch[i] = df$temp_switch[1]
     
     #print(i) 
   }
