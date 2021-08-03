@@ -17,7 +17,7 @@ library(lhs)
 
 source("abm6.R")
 
-#This file is designed to be run on a cluster across 20 jobs -- the job.number variable is used to name output files from each node
+#This file is designed to be run on a cluster across 20 jobs -- the job.number variable is used to name output files from each job
 job.number <- commandArgs(trailingOnly = TRUE)[1]
 
 ####************************** FUNCTIONS TO VARY PARAM SETS **************************####
