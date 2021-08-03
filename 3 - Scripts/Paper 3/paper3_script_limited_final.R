@@ -17,6 +17,7 @@ library(lhs)
 
 source("abm6.R")
 
+#This file is designed to be run on a cluster across 20 jobs -- the job.number variable is used to name output files from each node
 job.number <- commandArgs(trailingOnly = TRUE)[1]
 
 ####************************** FUNCTIONS TO VARY PARAM SETS **************************####
@@ -64,7 +65,7 @@ wd <- "/n/home00/jgiardina/BackToSchool2/3 - Output/Final_Runs_Output"
 setwd(wd)
 
 # simulation setup
-nsamp <- 15000
+nsamp <- 27500
 random.draws <- randomLHS(n = nsamp, k = 8)
 df_ELEM = data.frame(mitigation = qunif(random.draws[,1], min = 0, max = 1),
                      prob = qunif(random.draws[,4],min = 0, max = 60)*3/100000) %>%
