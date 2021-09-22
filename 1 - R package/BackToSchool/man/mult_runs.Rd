@@ -21,6 +21,7 @@ mult_runs(
   attack = 0.01,
   child_trans = 1,
   child_susp = 0.5,
+  child_vax = 0,
   p_subclin_adult = 0,
   p_subclin_child = 0,
   teacher_trans = 1,
@@ -29,6 +30,7 @@ mult_runs(
   n_staff_contact = 0,
   n_HH = 0,
   num_adults = 2,
+  family_susp = 1,
   n_start = 1,
   time_seed_inf = NA,
   days_inf = 6,
@@ -60,6 +62,9 @@ mult_runs(
   include_weekends = T,
   turnaround.time = 1,
   test_start_day = 1,
+  test_quarantine = F,
+  vax_eff = 0.9,
+  surveillance = F,
   version = 2
 )
 }
@@ -92,6 +97,8 @@ mult_runs(
 
 \item{child_susp}{Relative transmissibility of children (vs. adults); defaults to .5}
 
+\item{child_vax}{Vaccination rate of children; defaults to 0}
+
 \item{p_subclin_adult}{Fraction of adults with subclinical but not techincally asymptomatic disease; defaults to 0}
 
 \item{p_subclin_child}{Fraction of children with subclinical but not techincally asymptomatic disease; defaults to 0}
@@ -107,6 +114,8 @@ mult_runs(
 \item{n_HH}{number of households a household interacts with when not attending school; defaults to 0}
 
 \item{num_adults}{number of adults interacting with children, defaults to 2}
+
+\item{family_susp}{Factor by which adult transmissibility is reduced due to intervention; defaults to 1}
 
 \item{n_start}{number of infections to seed model; defaults to 1}
 
@@ -159,6 +168,12 @@ mult_runs(
 \item{turnaround.time}{test turnaround time, default = 1 day}
 
 \item{test_start_day}{day tests are implemented for weekly testing; defaults to 1 = Monday}
+
+\item{test_quarantine}{whether quarantined individuals attend school but are tested daily; defaults to FALSE}
+
+\item{vax_eff}{Vaccine efficacy, defaults to 0.9}
+
+\item{surveillance}{whether surveillance is underway; defaults to F}
 
 \item{version}{v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2}
 

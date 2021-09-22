@@ -182,6 +182,7 @@ make_school = function(
 #' @param attack Average daily attack rate in adults; defaults to 0.01
 #' @param child_trans Relative transmissibility of children (vs. adults); defaults to 1
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
+#' @param child_vax Vaccination rate of children; defaults to 0
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
@@ -200,7 +201,7 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
                              rel_trans = 1/8, rel_trans_brief = 1/50, p_asymp_adult = .35,
                              p_asymp_child = .7, p_subclin_adult = 0, p_subclin_child  = 0,
                              attack = .01, child_trans = 1, child_susp = .5, family_susp = 1,
-                             teacher_trans = 1, teacher_susp = 1, disperse_transmission = T,
+                             teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, child_vax = 0,
                              isolate = T, dedens = T, run_specials = F, start, vax_eff = .9, notify = T){
   
   # make non-teacher adults
@@ -260,21 +261,19 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            
            # susceptibility
            child_susp_val = child_susp,
+           child_vax_val = child_vax,
            teacher_susp_val = teacher_susp,
            family_susp_val = family_susp,
            vax_eff_val = vax_eff,
            
-           vacc = ifelse(adult, 1, rbinom(n, size = 1, prob = child_susp_val)),
+           vacc = ifelse(adult, 1, rbinom(n, size = 1, prob = child_vax_val)),
            vacc = ifelse(adult & !family, rbinom(n, size = 1, prob = teacher_susp_val), vacc),
            vacc = ifelse(family, rbinom(n, size = 1, prob = family_susp_val), vacc),
            
            susp = ifelse(vacc==0, 1, rbinom(n, size = 1, prob = 1-vax_eff_val)),
            
-           # PATCH FOR ELEMENTARY SCHOOLERS UNVACCED
-           # WILL NOT WORK WITH THEIR VACCINATIONS
-           # FIX WITH BETTER VERSION
-           temp_trans_val = child_trans,
-           vacc = ifelse(temp_trans_val<1 & !adult, 0, vacc),
+           # HARD CODED FOR KIDDOS TO BE HAVE HALF SUSCEPTIBILITY
+           susp = ifelse(!adult, child_susp_val*susp, susp),
            
            # note to self -- adjust this in parameters
            specials = ifelse(run_specials, id%in%(m:(m-14)), id%in%(m:(m-4)))) %>% ungroup()
@@ -1156,6 +1155,7 @@ run_model = function(time = 30,
 #' @param attack Average daily attack rate in adults; defaults to 0.01
 #' @param child_trans Relative transmissibility of children (vs. adults); defaults to 1
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
+#' @param child_vax Vaccination rate of children; defaults to 0
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
@@ -1201,7 +1201,7 @@ run_model = function(time = 30,
 #' @export
 mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1,
                      rel_trans = 1/8, rel_trans_brief = 1/50, rel_trans_CC = 2, rel_trans_adult = 2, p_asymp_adult = .4, child_prob = 0.05, adult_prob = 0.01,
-                     p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, p_subclin_adult = 0, p_subclin_child = 0,
+                     p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, child_vax = 0, p_subclin_adult = 0, p_subclin_child = 0,
                      teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, family_susp = 1,
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
@@ -1231,7 +1231,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
                                rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
                                p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
-                               attack = attack, child_trans = child_trans, child_susp = child_susp, family_susp = family_susp,
+                               attack = attack, child_trans = child_trans, child_susp = child_susp, child_vax = child_vax, family_susp = family_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
                                isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify)
     

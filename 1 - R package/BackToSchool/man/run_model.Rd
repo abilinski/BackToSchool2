@@ -36,6 +36,8 @@ run_model(
   turnaround.time = 1,
   type = "base",
   version = 2,
+  test_quarantine = F,
+  surveillance = F,
   df,
   sched
 )
@@ -92,6 +94,10 @@ run_model(
 \item{type}{"base", "On/off", "A/B", "Remote"; defaults to "base"}
 
 \item{version}{v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2}
+
+\item{test_quarantine}{whether quarantined individuals attend school but are tested daily; defaults to FALSE}
+
+\item{surveillance}{whether surveillance is underway; defaults to F}
 
 \item{df}{school data frame from make_school()}
 

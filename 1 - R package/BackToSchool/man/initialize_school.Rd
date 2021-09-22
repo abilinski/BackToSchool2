@@ -17,13 +17,17 @@ initialize_school(
   attack = 0.01,
   child_trans = 1,
   child_susp = 0.5,
+  family_susp = 1,
   teacher_trans = 1,
   teacher_susp = 1,
   disperse_transmission = T,
+  child_vax = 0,
   isolate = T,
   dedens = T,
   run_specials = F,
-  start
+  start,
+  vax_eff = 0.9,
+  notify = T
 )
 }
 \arguments{
@@ -51,11 +55,15 @@ initialize_school(
 
 \item{child_susp}{Relative transmissibility of children (vs. adults); defaults to .5}
 
+\item{family_susp}{Factor by which adult transmissibility is reduced due to intervention; defaults to 1}
+
 \item{teacher_trans}{Factor by which teacher transmissibility is reduced due to intervention; defaults to 1}
 
 \item{teacher_susp}{Factor by which teacher transmissibility is reduced due to intervention; defaults to 1}
 
 \item{disperse_transmission}{Whether transmission is overdispersed (vs. all have equal attack rate); default to T}
+
+\item{child_vax}{Vaccination rate of children; defaults to 0}
 
 \item{isolate}{Whether symptomatic individuals isolate when symptoms emerge; defaults to T}
 
@@ -64,6 +72,10 @@ initialize_school(
 \item{run_specials}{Whether special subjects are run; defaults to F}
 
 \item{start}{Data frame from make_class()}
+
+\item{vax_eff}{Vaccine efficacy, defaults to 0.9}
+
+\item{notify}{Whether classrooms are notified following a positive test; defaults to T}
 }
 \value{
 out data frame of child and teacher attributes.
