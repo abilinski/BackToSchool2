@@ -182,7 +182,6 @@ make_school = function(
 #' @param attack Average daily attack rate in adults; defaults to 0.01
 #' @param child_trans Relative transmissibility of children (vs. adults); defaults to 1
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
-#' @param child_vax Vaccination rate of children; defaults to 0
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
@@ -192,7 +191,6 @@ make_school = function(
 #' @param dedens Whether dedensification measures reduce attack rate; defaults to F
 #' @param run_specials Whether special subjects are run; defaults to F
 #' @param vax_eff Vaccine efficacy, defaults to 0.9
-#' @param no_test_vacc Indicates whether vaccinated individuals are excluded from TTS & screening; defaults to F
 #' @param start Data frame from make_class()
 #'
 #' @return out data frame of child and teacher attributes.
@@ -202,8 +200,8 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
                              rel_trans = 1/8, rel_trans_brief = 1/50, p_asymp_adult = .35,
                              p_asymp_child = .7, p_subclin_adult = 0, p_subclin_child  = 0,
                              attack = .01, child_trans = 1, child_susp = .5, family_susp = 1,
-                             teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, child_vax = 0,
-                             isolate = T, dedens = T, run_specials = F, start, vax_eff = .9, notify = T, no_test_vacc = F){
+                             teacher_trans = 1, teacher_susp = 1, disperse_transmission = T,
+                             isolate = T, dedens = T, run_specials = F, start, vax_eff = .9, notify = T){
   
   # make non-teacher adults
   n = nrow(start)
@@ -262,20 +260,21 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            
            # susceptibility
            child_susp_val = child_susp,
-           child_vax_val = child_vax,
            teacher_susp_val = teacher_susp,
            family_susp_val = family_susp,
            vax_eff_val = vax_eff,
            
-           vacc = ifelse(adult, 1, rbinom(n, size = 1, prob = child_vax_val)),
+           vacc = ifelse(adult, 1, rbinom(n, size = 1, prob = child_susp_val)),
            vacc = ifelse(adult & !family, rbinom(n, size = 1, prob = teacher_susp_val), vacc),
            vacc = ifelse(family, rbinom(n, size = 1, prob = family_susp_val), vacc),
-           inc_test = ifelse(no_test_vacc & vacc, 0, 1),
            
            susp = ifelse(vacc==0, 1, rbinom(n, size = 1, prob = 1-vax_eff_val)),
            
-           # HARD CODED FOR KIDDOS TO BE HAVE HALF SUSCEPTIBILITY
-           susp = ifelse(!adult, child_susp_val*susp, susp),
+           # PATCH FOR ELEMENTARY SCHOOLERS UNVACCED
+           # WILL NOT WORK WITH THEIR VACCINATIONS
+           # FIX WITH BETTER VERSION
+           temp_trans_val = child_trans,
+           vacc = ifelse(temp_trans_val<1 & !adult, 0, vacc),
            
            # note to self -- adjust this in parameters
            specials = ifelse(run_specials, id%in%(m:(m-14)), id%in%(m:(m-4)))) %>% ungroup()
@@ -854,7 +853,7 @@ run_model = function(time = 30,
   #print(testing_days)
   
   # testing
-  if(test_type=="all"){ df$test_type = !df$family & (df$inc_test | test_frac>=0.7)
+  if(test_type=="all"){ df$test_type = !df$family & (df$vacc!=1 | test_frac>=0.7)
   } else if(test_type=="staff"){df$test_type = df$adult & !df$family
   } else if(test_type=="students"){df$test_type = !df$adult}
   class_test_ind = 0
@@ -877,7 +876,7 @@ run_model = function(time = 30,
     
     # present
     if(test_quarantine==T) {
-      df$test_type_q = !df$family & ((df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)) | df$symp_now) & df$inc_test
+      df$test_type_q = !df$family & ((df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)) | df$symp_now) #& df$vacc!=1 
       df$test_ct_q = df$test_ct_q + df$present*as.numeric(df$test_type_q)
       df$test_q = rbinom(nrow(df), size = 1, prob = 0.8*df$present*df$test_type_q)
       df$t_end_inf = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
@@ -1157,7 +1156,6 @@ run_model = function(time = 30,
 #' @param attack Average daily attack rate in adults; defaults to 0.01
 #' @param child_trans Relative transmissibility of children (vs. adults); defaults to 1
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
-#' @param child_vax Vaccination rate of children; defaults to 0
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
 #' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
@@ -1198,18 +1196,17 @@ run_model = function(time = 30,
 #' @param num_adults number of adults interacting with children, defaults to 2
 #' @param surveillance whether surveillance is underway; defaults to F
 #' @param includeFamily whether to include family, default = FALSE
-#' @param no_test_vacc Indicates whether vaccinated individuals are excluded from TTS & screening; defaults to F
 #' @param synthpop synthetic population; defaults to synthMaryland
 #'
 #' @export
 mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1,
                      rel_trans = 1/8, rel_trans_brief = 1/50, rel_trans_CC = 2, rel_trans_adult = 2, p_asymp_adult = .4, child_prob = 0.05, adult_prob = 0.01,
-                     p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, child_vax = 0, p_subclin_adult = 0, p_subclin_child = 0,
+                     p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, p_subclin_adult = 0, p_subclin_child = 0,
                      teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, family_susp = 1,
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
-                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, vax_eff = 0.9, surveillance = F, no_test_vacc = F, version = 2){
+                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, vax_eff = 0.9, surveillance = F, version = 2){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
@@ -1234,9 +1231,9 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     school = initialize_school(n_contacts = n_contacts, n_contacts_brief = n_contacts_brief, rel_trans_HH = rel_trans_HH,
                                rel_trans = rel_trans, rel_trans_brief = rel_trans_brief, p_asymp_adult = p_asymp_adult,
                                p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
-                               attack = attack, child_trans = child_trans, child_susp = child_susp, child_vax = child_vax, family_susp = family_susp,
+                               attack = attack, child_trans = child_trans, child_susp = child_susp, family_susp = family_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
-                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify, no_test_vacc = no_test_vacc)
+                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify)
     
     ## make schedule
     sched = make_schedule(time = time + 15, df = school, type = type, total_days = total_days)

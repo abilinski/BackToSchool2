@@ -96,3 +96,17 @@ sapply(c(4,10,16), function(a) chk_group(n_class_val = a, includeFamily = T))
 sapply(c(4,10,16), function(a) chk_group(n_class_val = a, includeFamily = T, synthpop_val = synthpop_MS))
 sapply(c(4,10,16), function(a) chk_group(n_class_val = a, includeFamily = T, synthpop_val = synthpop_HS))
 
+
+# check group numbers
+chk_class = function(n = 30, synthpop_val = synthpop, 
+                     includeFamily_val = F, n_class_val = 4){
+  
+  g = make_school(n_other_adults = n, synthpop = synthpop_val,
+                  includeFamily = includeFamily_val, n_class = n_class_val)
+  h = g %>% filter(class!=99) %>% group_by(class) %>% summarize(out = length(class))
+  return(c(min(h$out), max(h$out), mean(h$out), median(h$out)))
+}
+
+sapply(c(4,10,16), function(a) chk_class(n_class_val = a))
+sapply(c(4,10,16), function(a) chk_class(n_class_val = a, synthpop_val = synthpop_MS))
+sapply(c(4,10,16), function(a) chk_class(n_class_val = a, synthpop_val = synthpop_HS))
