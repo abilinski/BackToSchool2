@@ -110,3 +110,15 @@ chk_class = function(n = 30, synthpop_val = synthpop,
 sapply(c(4,10,16), function(a) chk_class(n_class_val = a))
 sapply(c(4,10,16), function(a) chk_class(n_class_val = a, synthpop_val = synthpop_MS))
 sapply(c(4,10,16), function(a) chk_class(n_class_val = a, synthpop_val = synthpop_HS))
+
+#*************************** TEST INITIALIZE_SCHOOL *********************************#
+
+g = make_school(n_other_adults = 30, synthpop = synthpop,
+                includeFamily = T, n_class = 4)
+
+chk_vacc = function(a){
+  
+}
+
+#*************************** ADDITIONAL TESTS *********************************#
+

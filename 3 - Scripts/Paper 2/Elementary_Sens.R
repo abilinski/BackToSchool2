@@ -8,7 +8,7 @@ wd = paste0("/n/home00/abilinski/Schools/ES_11_Jul_", version)
 setwd(wd)
 
 # number of  simulations
-n_tot = 1000
+n_tot = 1
 
 # screening sensitivity
 df_SENS1 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_HH = 2,
@@ -22,7 +22,7 @@ df_SENS1 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    p_asymp_adult = .2, p_asymp_child = 0,
                    p_subclin_adult = .2, p_subclin_child = .8,
                    mult_asymp = .5, quarantine.length = c(7,10),
-                   turnaround.time = c(2),
+                   turnaround.time = c(2), child_vax = 0,
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
 
@@ -38,7 +38,7 @@ df_SENS2 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    p_asymp_adult = .2, p_asymp_child = 0,
                    p_subclin_adult = .2, p_subclin_child = .8,
                    mult_asymp = .5, quarantine.length = c(7,10),
-                   turnaround.time = c(2),
+                   turnaround.time = c(2), child_vax = 0,
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
 
@@ -55,7 +55,7 @@ df_SENS3 = make_df(attack = c(.01, .02), days_inf = 10,
                    p_asymp_adult = .2, p_asymp_child = 0,
                    p_subclin_adult = .2, p_subclin_child = .8,
                    mult_asymp = .5, quarantine.length = c(7,10),
-                   turnaround.time = c(2),
+                   turnaround.time = c(2), child_vax = 0,
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
 
@@ -71,7 +71,7 @@ df_SENS4 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    p_asymp_adult = .2, p_asymp_child = 0,
                    p_subclin_adult = .2, p_subclin_child = .8,
                    mult_asymp = .5, quarantine.length = c(7,10),
-                   turnaround.time = c(2),
+                   turnaround.time = c(2), child_vax = 0,
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
 
@@ -88,11 +88,11 @@ df_SENS5 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    p_subclin_adult = .2, p_subclin_child = .8,
                    mult_asymp = .5, quarantine.length = c(7,10),
                    turnaround.time = c(2),
-                   test_start_day = c(1:7),
+                   test_start_day = c(1:7), child_vax = 0,
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
 
-# day of screening
+# efficacy
 df_SENS6 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_HH = 2,
                    test_days = c("week"), 
                    test_type = c("all"),
@@ -105,7 +105,7 @@ df_SENS6 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    p_subclin_adult = .2, p_subclin_child = .8,
                    mult_asymp = .5, quarantine.length = c(7,10),
                    turnaround.time = c(2),
-                   vax_eff = c(.5, .7, .9),
+                   vax_eff = c(.5, .7, .9), child_vax = .3,
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
 
@@ -133,17 +133,15 @@ df_SENS8 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    test_frac = .9,
                    test_sens = .9,
                    scenario = c("Base case"), teacher_susp = c(.9),
-                   prob = 25*3/100000, time = 30,
+                   prob = 25*3/100000, time = 30, child_vax = 0,
                    child_trans = .5, child_susp = .5, high_school = F,
                    p_asymp_adult = .2, p_asymp_child = 0,
                    p_subclin_adult = .2, p_subclin_child = .8,
                    mult_asymp = .5, quarantine.length = c(7,10),
                    turnaround.time = c(2),
-                   no_vacc_test = c(T, F),
+                   no_test_vacc = c(T, F),
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
-
-
 
 df_ELEM = rbind(df_SENS1, df_SENS2, df_SENS3, df_SENS4, df_SENS5, df_SENS6, df_SENS7, df_SENS8) %>% mutate(i = row_number()) %>% 
   dplyr::select(-test_quarantine) %>% expand_grid(test_quarantine = c(T, F)) %>%

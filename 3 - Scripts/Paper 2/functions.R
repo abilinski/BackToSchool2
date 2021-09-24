@@ -10,7 +10,6 @@ library(igraph)
 library(foreach) 
 library(doMC) 
 library(BackToSchool)
-library(ddpcr)
 
 ####************************** FUNCTIONS TO VARY PARAM SETS **************************#### 
 

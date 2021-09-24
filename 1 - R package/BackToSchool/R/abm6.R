@@ -273,8 +273,6 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            inc_test = ifelse(no_test_vacc & vacc, 0, 1),
            
            susp = ifelse(vacc==0, 1, rbinom(n, size = 1, prob = 1-vax_eff_val)),
-           
-           # HARD CODED FOR KIDDOS TO BE HAVE HALF SUSCEPTIBILITY
            susp = ifelse(!adult, child_susp_val*susp, susp),
            
            # note to self -- adjust this in parameters
@@ -878,6 +876,7 @@ run_model = function(time = 30,
     # present
     if(test_quarantine==T) {
       df$test_type_q = !df$family & ((df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)) | df$symp_now) & df$inc_test
+      #print("got to test_q"); print(dim(df)); print(df %>% group_by(vacc) %>% summarize(sum(test_type_q)))
       df$test_ct_q = df$test_ct_q + df$present*as.numeric(df$test_type_q)
       df$test_q = rbinom(nrow(df), size = 1, prob = 0.8*df$present*df$test_type_q)
       df$t_end_inf = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
@@ -940,6 +939,7 @@ run_model = function(time = 30,
     if(test & t%in%testing_days){
       #print(test); print(t); print(testing_days)
       #print(t)
+      #print("got to testing"); print(dim(df)); print(df %>% group_by(vacc) %>% summarize(sum(test_type)))
       df$test_ct = df$test_ct + rbinom(nrow(df), size = 1, prob = df$present*test_frac*as.numeric(df$test_type))
       df$test = rbinom(nrow(df), size = 1, prob = test_sens*test_frac*as.numeric(df$test_type))
       df$t_end_inf = ifelse(df$inf & df$test & df$present, t, df$t_end_inf)

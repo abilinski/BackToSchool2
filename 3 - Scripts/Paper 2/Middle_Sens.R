@@ -7,7 +7,7 @@ wd = paste0("/n/home00/abilinski/Schools/MS_11_Jul_", version)
 setwd(wd)
 
 # number of  simulations
-n_tot = 1000
+n_tot = 1
 
 # screening sensitivity
 df_SENS1 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_HH = 2,
@@ -145,7 +145,7 @@ df_SENS8 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    p_subclin_adult = .2, p_subclin_child = .4,
                    mult_asymp = .5, quarantine.length = c(7,10),
                    turnaround.time = c(2),
-                   no_vacc_test = c(T,F),
+                   no_test_vacc = c(T,F),
                    n_other_adults = 30, n_class = 7, 
                    test_quarantine = test_q, notify = notify_val)
 
@@ -175,5 +175,3 @@ class = make_school(synthpop = synthpop_MS, n_other_adults = df_ELEM$n_other_adu
 tic()
 run_parallel(df_ELEM, synthpop_MS, class = class)
 toc()
-
-setwd("/home/rstudio")
