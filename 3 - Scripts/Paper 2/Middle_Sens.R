@@ -3,7 +3,7 @@
 source("functions.R")
 
 # local
-wd = paste0("/n/home00/abilinski/Schools/MS_11_Jul_", version)
+wd = paste0("/users/abilinsk/data/abilinsk/Schools/MS_24_Sep_Sens_0", version)
 setwd(wd)
 
 # number of  simulations

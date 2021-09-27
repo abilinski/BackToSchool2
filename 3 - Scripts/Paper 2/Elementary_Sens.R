@@ -4,7 +4,7 @@
 source("functions.R")
 
 # local
-wd = paste0("/n/home00/abilinski/Schools/ES_11_Jul_", version)
+wd = paste0("/users/abilinsk/data/abilinsk/Schools/ES_24_Sep_Sens_0", version)
 setwd(wd)
 
 # number of  simulations
@@ -126,7 +126,7 @@ df_SENS7 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_H
                    n_other_adults = 30, n_class = 5, 
                    test_quarantine = test_q, notify = notify_val) 
 
-# vax coverage
+# testing vaxxed folks
 df_SENS8 = make_df(attack = c(.02, .04), n_tot = n_tot, start_type = "cont", n_HH = 2,
                    test_days = c("week"), 
                    test_type = c("all"),

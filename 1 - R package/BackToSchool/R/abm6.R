@@ -15,7 +15,7 @@ library(tictoc)
 #'
 #' A data frame containing a synthetic population of children
 #' ages 5-10, representative of the state of Maryland.
-#' This is used by make_class() to sort children into classes.
+#' This is used by make_school() to sort children into classes.
 #'
 #' @docType data
 #' @format A data frame with
@@ -40,7 +40,7 @@ library(tictoc)
 #'
 #' A data frame containing a synthetic population of children
 #' ages 14-17, representative of the state of Maryland.
-#' This is used by make_class() to sort children into classes.
+#' This is used by make_school() to sort children into classes.
 #'
 #' @docType data
 #' @format A data frame with
@@ -169,7 +169,7 @@ make_school = function(
 #'
 #' This function takes in a data frame exported by make_school().
 #' It adds epidemiological attributes of the full school community.
-#'
+
 #' @param n_contacts Number of sustained contacts outside of the classroom; defaults to 10
 #' @param n_contacts_brief Number of brief contacts outside of the classroom; defaults to 0
 #' @param rel_trans_HH Relative attack rate of household contact (vs. classrom); defaults to 1
@@ -193,7 +193,7 @@ make_school = function(
 #' @param run_specials Whether special subjects are run; defaults to F
 #' @param vax_eff Vaccine efficacy, defaults to 0.9
 #' @param no_test_vacc Indicates whether vaccinated individuals are excluded from TTS & screening; defaults to F
-#' @param start Data frame from make_class()
+#' @param start Data frame from make_school()
 #'
 #' @return out data frame of child and teacher attributes.
 #'
@@ -670,6 +670,9 @@ run_specials = function(a, df, specials){
 #' @param test whether there is weekly testing; defaults to F
 #' @param test_sens test sensitivity; defaults to 0.7
 #' @param test_frac fraction of school tested; defaults to 0.9
+#' @param test_days test frequency; "day", "week", "2x_week"; defaults to "week"
+#' @param test_type group tested; defaults to "all", also allows "staff" and "students"
+#' @param test_start_day day tests are implemented for weekly testing; defaults to 1 = Monday
 #' @param n_staff_contact number of contacts a teacher/staff member has with other teachers/staff members; defaults to 1
 #' @param n_HH number of households a household interacts with when not attending school; defaults to 0
 #' @param bubble whether out-of-school interactions occur with a 'bubble'; defaults to F
@@ -683,14 +686,15 @@ run_specials = function(a, df, specials){
 #' @param start_type type of seed; default is "mix" (also "adult", "child", "cont")
 #' @param quarantine.length length of quarantine when someone is infectious; defaults to 10
 #' @param quarantine.grace length of grace period after which a quarantined class returns not to be "re-quarantined"
-#' @param quarantine.grace length of grace period after which a quarantined class returns not to be "re-quarantined"
 #' @param start_mult value to indicate relative frequency of adult/child infections; defaults to 1 (adults 2x as likely as kids)
-#' @param test_type group tested; defaults to "all", also allows "staff" and "students"
-#' @param test_start_day day tests are implemented for weekly testing; defaults to 1 = Monday
 #' @param num_adults number of adults interacting with children, defaults to 2
 #' @param include_weekends if TRUE excludes weekends from additional out-of-school mixing, defaults to F
 #' @param turnaround.time test turnaround time, default = 1 day
+#' @param child_prob if start_type = "cont", set daily probability of infectious entry for children, defaults to .05
+#' @param adult_prob if start_type = "cont", set daily probability of infectious entry for adults, defaults to .01
 #' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
+#' @param rel_trans_CC relative transmission in childcare vs. classroom; defaults to 2
+#' @param rel_trans_adult relative transmission in staff-staff interactions vs. classroom; defaults to 2
 #' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
 #' @param surveillance whether surveillance is underway; defaults to F
 #' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
@@ -705,6 +709,8 @@ run_specials = function(a, df, specials){
 #' @export
 #### NOTE: I found this to be slower when coded w/tidyverse.
 #### Therefore for the most part, this is coded in base.
+
+
 run_model = function(time = 30,
                      notify = F,
                      test = F,
@@ -1150,6 +1156,8 @@ run_model = function(time = 30,
 #' @param rel_trans_HH Relative attack rate of household contact (vs. classrom); defaults to 1
 #' @param rel_trans Relative attack rate of sustained contact (vs. classroom); defaults to 1/8
 #' @param rel_trans_brief Relative attack rate of brief contact (vs. classroom); defaults to 1/50
+#' @param rel_trans_CC relative transmission in childcare vs. classroom; defaults to 2
+#' @param rel_trans_adult relative transmission in staff-staff interactions vs. classroom; defaults to 2
 #' @param p_asymp_adult Fraction of adults with asymptomatic (unsuspected) disease; defaults to 0.2
 #' @param p_asymp_child Fraction of children with asymptomatic (unsuspected) disease; defaults to 0.8
 #' @param p_subclin_adult Fraction of adults with subclinical but not techincally asymptomatic disease; defaults to 0
@@ -1159,8 +1167,8 @@ run_model = function(time = 30,
 #' @param child_susp Relative transmissibility of children (vs. adults); defaults to .5
 #' @param child_vax Vaccination rate of children; defaults to 0
 #' @param teacher_trans Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
-#' @param teacher_susp Factor by which teacher transmissibility is reduced due to intervention; defaults to 1
-#' @param family_susp Factor by which adult transmissibility is reduced due to intervention; defaults to 1
+#' @param teacher_susp Teacher vaccination rate; defaults to 0.8
+#' @param family_susp Household member vaccination rate; defaults to 0.7
 #' @param disperse_transmission Whether transmission is overdispersed (vs. all have equal attack rate); default to T
 #' @param n_staff_contact number of contacts a teacher/staff member has with other teachers/staff members; defaults to 1
 #' @param n_HH number of households a household interacts with when not attending school; defaults to 0
@@ -1172,40 +1180,43 @@ run_model = function(time = 30,
 #' @param seed_asymp whether to seed with an asymptomatic case
 #' @param isolate Whether symptomatic individuals isolate when symptoms emerge; defaults to T
 #' @param dedens Whether dedensification measures reduce attack rate; defaults to F
-#' @param run_specials Whether special subjects are run; defaults to F
+#' @param run_specials_now Whether special subjects are run; defaults to F
 #' @param time length of time to run model; defaults to 30
 #' @param notify whether classrooms are notified and quarantined; defaults to F
 #' @param test whether there is weekly testing; defaults to F
 #' @param test_sens test sensitivity; defaults to 0.7
 #' @param test_frac fraction of school tested; defaults to 0.9
-#' @param test_days vector indicating days on which students are tested; defaults to Sundays
-#' @param test_start_day day tests are implemented for weekly testing; defaults to 1 = Monday
+#' @param test_days test frequency; "day", "week", "2x_week"; defaults to "week"
 #' @param test_type group tested; defaults to "all", also allows "staff" and "students"
+#' @param test_start_day day tests are implemented for weekly testing; defaults to 1 = Monday
+#' @param n_class number of classes per grade
 #' @param high_school whether to use a high school schedule of random period mixing; defaults to F
 #' @param nper number of school periods; defaults to 8
 #' @param start_mult value to indicate relative frequency of adult/child infections; defaults to 1 (adults 2x as likely as kids)
-#' @param @start_type type of seed; default is "mix" (also "adult", "child")
+#' @param start_type type of seed; default is "mix" (also "adult", "child")
 #' @param child_prob if start_type = "cont", set daily probability of infectious entry for children, defaults to .05
 #' @param adult_prob if start_type = "cont", set daily probability of infectious entry for adults, defaults to .01
 #' @param quarantine.length length of quarantine when someone is infectious; defaults to 10
 #' @param quarantine.grace length of grace period after which a quarantined class returns not to be "re-quarantined"
-#' @param turnaround.time test turnaround time, default = 1 day
-#' @param type "base", "On/off", "A/B", "Remote"; defaults to "base"
-#' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
+#' @param turnaround.time test turnaround time, default = 3 days
+#' @param type schedule; "base", "On/off", "A/B", "Remote"; defaults to "base"
 #' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param total_days number of days in school; defaults to 5
-#' @param vax_eff Vaccine efficacy, defaults to 0.9
 #' @param num_adults number of adults interacting with children, defaults to 2
-#' @param surveillance whether surveillance is underway; defaults to F
 #' @param includeFamily whether to include family, default = FALSE
+#' @param include_weekends if TRUE excludes weekends from additional out-of-school mixing, defaults to F
+#' @param vax_eff Vaccine efficacy, defaults to 0.9
+#' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
+#' @param surveillance whether surveillance is underway; defaults to F
 #' @param no_test_vacc Indicates whether vaccinated individuals are excluded from TTS & screening; defaults to F
-#' @param synthpop synthetic population; defaults to synthMaryland
-#'
+#' @param synthpop synthetic population; defaults to synthpop based on Maryland elementary school
+#' @param class make_school object; defaults to NA and will call for each simulation
+#' 
 #' @export
 mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1,
                      rel_trans = 1/8, rel_trans_brief = 1/50, rel_trans_CC = 2, rel_trans_adult = 2, p_asymp_adult = .4, child_prob = 0.05, adult_prob = 0.01,
                      p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, child_vax = 0, p_subclin_adult = 0, p_subclin_child = 0,
-                     teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, family_susp = 1,
+                     teacher_trans = 1, teacher_susp = .8, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, family_susp = .7,
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
@@ -1236,7 +1247,8 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                                p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
                                attack = attack, child_trans = child_trans, child_susp = child_susp, child_vax = child_vax, family_susp = family_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
-                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify, no_test_vacc = no_test_vacc)
+                               isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify, 
+                               no_test_vacc = no_test_vacc)
     
     ## make schedule
     sched = make_schedule(time = time + 15, df = school, type = type, total_days = total_days)
@@ -1252,6 +1264,8 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    test_start_day = test_start_day, type = type, test_quarantine = test_quarantine, version = version, surveillance = surveillance)
     
     time_keep = df$start.time[1]
+    print(time_keep)
+    print(length(time_keep:(time_keep+time-1)))
     
     # store output
     keep$all[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1)

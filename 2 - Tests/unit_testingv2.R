@@ -120,5 +120,16 @@ chk_vacc = function(a){
   
 }
 
+#*************************** TEST MAKE_SCHEDULE *********************************#
+
+#*************************** TEST MULT_RUNS *************************************#
+#* Is every argument passed to every subfunction?
+# make_school = 4
+# initialize_school = 19
+# make_schedule = 4
+# run_model = 63
+
+#* How many days are you keeping?
+
 #*************************** ADDITIONAL TESTS *********************************#
 
