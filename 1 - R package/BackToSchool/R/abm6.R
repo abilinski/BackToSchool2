@@ -275,7 +275,6 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            susp = ifelse(vacc==0, 1, rbinom(n, size = 1, prob = 1-vax_eff_val)),
            susp = ifelse(!adult, child_susp_val*susp, susp),
            
-           # note to self -- adjust this in parameters
            specials = ifelse(run_specials, id%in%(m:(m-14)), id%in%(m:(m-4)))) %>% ungroup()
   
   return(df)
@@ -709,8 +708,6 @@ run_specials = function(a, df, specials){
 #' @export
 #### NOTE: I found this to be slower when coded w/tidyverse.
 #### Therefore for the most part, this is coded in base.
-
-
 run_model = function(time = 30,
                      notify = F,
                      test = F,
@@ -757,6 +754,7 @@ run_model = function(time = 30,
   if(start_type=="adult") id.samp = sample(df$id[!df$family & df$adult], n_start)       
   if(start_type=="teacher") id.samp = sample(df$id[!df$family & df$adult & df$class!=99], n_start)               
   if(start_type=="child") id.samp = sample(df$id[!df$family & !df$adult], n_start) 
+  if(start_type=="family") id.samp = sample(df$id[df$family], n_start) 
   
   # bubbles
   if(bubble & n_HH > 0){
@@ -826,10 +824,10 @@ run_model = function(time = 30,
   }
   
   # set actual seeds
-  if(nrow(df.temp)>0){
-    df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
-                                                  set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
-    df$start = df$id %in% df.temp$id.samp
+  if(!exists("df.temp")){
+    
+    # compress if time_seed_inf is a vector
+    df.temp = data.frame(time_seed_inf, id.samp) # backward compatibility
     
     # now below
     #df.u = df[df$id%in% df.temp$id.samp,]
@@ -837,11 +835,15 @@ run_model = function(time = 30,
     #if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
   }
   
-  # compress if time_seed_inf is a vector
-  if(start_type == "cont") time_seed_inf = 15 # start on Monday with testing
-  df.temp = data.frame(time_seed_inf) # backward compatibility
-  df$start.time = time_seed_inf
+  if(start_type == "cont") {
+    time_seed_inf = 15 # start on Monday with testing
+    }else{df$start.time = time_seed_inf}
   
+  # setup
+  df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
+                                                set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
+  df$start = df$id %in% df.temp$id.samp
+
   # test days
   # if null, make this Monday
   if(test_days == "week") {testing_days = seq(test_start_day, (time+15), by = 7)}
@@ -896,7 +898,7 @@ run_model = function(time = 30,
     
     # re-estimated who is present
     df$present = sched$present[sched$t==t] & !df$q_out & !df$HH_id%in%df$HH_id[df$q_out]
-    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home > t & !df$family
+    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home > t 
     df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf > t
     
     if(high_school & nrow(classes_out)>0){
@@ -991,6 +993,7 @@ run_model = function(time = 30,
     if(sum(df$inf_home)>0) {
       
       home_infs = df$id[df$inf_home]
+      print(home_infs)
       if(sum(df$inf_home > 1)) home_infs = sample(home_infs)
       
       for(a in home_infs){
