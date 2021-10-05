@@ -154,7 +154,7 @@ make_school = function(
     # make family data frame
     family = data.frame(HH_id = c(rep(1:max(synthpop$HH_id), each = 2), unique(teachers$HH_id), unique(other_adults$HH_id)),
                         age = 0, flag_mult = NA, family = T, adult = T,
-                        group = 99, group_quarter = 90, class = 99) %>%
+                        group = 99, group_quarter = 99, class = 99) %>%
       mutate(family_staff = ifelse(HH_id > max(synthpop$HH_id), T, F))
     
     out = out %>% bind_rows(family)
@@ -203,7 +203,8 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
                              p_asymp_child = .7, p_subclin_adult = 0, p_subclin_child  = 0,
                              attack = .01, child_trans = 1, child_susp = .5, family_susp = 1,
                              teacher_trans = 1, teacher_susp = 1, disperse_transmission = T, child_vax = 0,
-                             isolate = T, dedens = T, run_specials = F, start, vax_eff = .9, notify = T, no_test_vacc = F){
+                             isolate = T, dedens = T, run_specials = F, start, vax_eff = .9, notify = T, 
+                             no_test_vacc = F){
   
   # make non-teacher adults
   n = nrow(start)
@@ -360,7 +361,6 @@ run_household = function(a, df){
   
   # if there is more than one person in the household
   if(df$HH_id[df$id==a]>0 & sum(df$HH_id==df$HH_id[df$id==a])>1) {
-    
     # identify HH members
     HH_vec = df[df$HH_id==df$HH_id[df$id==a] & df$id!=a,]
     
@@ -414,6 +414,7 @@ run_class = function(a, df, high_school = F, hs.classes = NA){
     # identify class members
     class_vec = df[df$id%in%hs.class.members & df$id!=a,]
     class_vec$count = sapply(class_vec$id, function(a) sum(hs.class.members==a))
+    #class_vec$count = sapply(class_vec$id, function(a) 1)
     
     # determine whether a class member becomes infected
     prob_class = rbinom(nrow(class_vec), size = 1, prob = df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*class_vec$susp*class_vec$present_susp*class_vec$count)
@@ -446,6 +447,7 @@ run_rand = function(a, df, random_contacts){
   # pull contacts from random graph
   id = which(df$id[df$present]==a)
   contact_id = df$id[df$present][random_contacts[[id]][[1]]]
+  #print(length(contact_id))
   contacts = df[df$id %in% contact_id,]
   
   # determine whether a contact becomes infected
@@ -453,7 +455,7 @@ run_rand = function(a, df, random_contacts){
                      prob = df$class_trans_prob[df$id==a]*contacts$susp*contacts$not_inf*df$relative_trans[df$id==a])
   # infected individuals
   infs = contacts$id*prob_rand
-  
+  #print(a); print(infs)
   return(infs)
 }
 
@@ -599,16 +601,17 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
       df.u$symp = 0
       df.u$sub_clin = 0
     }else{
-      df.u$t_exposed = 0
-      df.u$t_inf = set
       df.u$symp = rbinom(nrow(df.u), size = 1, prob = 1-df.u$p_asymp)
       df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 1)
+    }
+      df.u$t_exposed = 0
+      df.u$t_inf = set
       df.u$t_symp = df.u$t_inf + rnorm(nrow(df.u), mean = 2, sd = .4)
-    }}
+    }
   
   # add overdispersion
   attack_mult = rlnorm(nrow(df.u), meanlog = log(.84)-log((.84^2+.3)/.84^2)/2, sdlog = sqrt(log((.84^2+.3)/.84^2)))/.84
-  chk = df.u$super_spread | df.u$adult
+  chk = df.u$super_spread & df.u$adult
   df.u$class_trans_prob = ifelse(chk, df.u$class_trans_prob*attack_mult, df.u$class_trans_prob)
   
   # adjust for asymptomatic infection if applicable
@@ -659,6 +662,34 @@ run_specials = function(a, df, specials){
   
   return(infs)
 }
+
+#' Run model
+#'
+#' Perform a single model run
+#'
+#' @param df school data frame used in run_model setup
+#' @param nper number of school periods; defaults to 8
+#' 
+#' @export
+make_hs_classes = function(df, nper){
+
+  hs.classes = data.frame(period = numeric(), class = numeric(), id = numeric())
+
+  for(p in 1:nper){
+    m = max(df$class[df$class < 99])
+    temp = data.frame(period = p, id = df$id[df$class!=99], 
+                      age = df$age[df$class!=99],
+                      class = df$class[df$class!=99]) %>%
+      group_by(age) %>%
+      mutate(class = ifelse(age>0, sample(class), class),
+             class_old = class,
+             class = (period-1)*m + class)
+    hs.classes = hs.classes %>% bind_rows(temp)
+  }
+
+  return(hs.classes)
+}
+
 
 #' Run model
 #'
@@ -768,22 +799,7 @@ run_model = function(time = 30,
   # set up scheduling if high school
   hs.classes = NA
   if(high_school){
-    hs.classes = data.frame(period = numeric(), class = numeric(), id = numeric())
-    for(p in 1:nper){
-      m = max(df$class[df$class < 99])
-      temp = data.frame(period = p, id = df$id[df$class!=99], 
-                        age = df$age[df$class!=99],
-                        class = df$class[df$class!=99]) %>%
-        group_by(age) %>%
-        mutate(class = ifelse(age>0, sample(class), class),
-               class_old = class,
-               class = (period-1)*m + class)
-      hs.classes = hs.classes %>% bind_rows(temp)
-    }
-    
-    #chk = hs.classes$period[hs.classes$id==1]
-    #print(nrow(hs.classes[hs.classes$class%in%chk,]))
-    
+    hs.classes = make_hs_classes(df = df, nper = nper)    
     classes.ind = sapply(df$id, function(a) hs.classes$class[hs.classes$id == a])
   }
   
@@ -837,7 +853,8 @@ run_model = function(time = 30,
   
   if(start_type == "cont") {
     time_seed_inf = 15 # start on Monday with testing
-    }else{df$start.time = time_seed_inf}
+  }
+  df$start.time = time_seed_inf
   
   # setup
   df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
@@ -898,8 +915,8 @@ run_model = function(time = 30,
     
     # re-estimated who is present
     df$present = sched$present[sched$t==t] & !df$q_out & !df$HH_id%in%df$HH_id[df$q_out]
-    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home > t 
-    df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf > t
+    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home >= t
+    df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf >= t
     
     if(high_school & nrow(classes_out)>0){
       df$nq = !unlist(lapply(classes.ind, function(a) sum(a %in% classes_out$class)>0))
@@ -993,7 +1010,6 @@ run_model = function(time = 30,
     if(sum(df$inf_home)>0) {
       
       home_infs = df$id[df$inf_home]
-      print(home_infs)
       if(sum(df$inf_home > 1)) home_infs = sample(home_infs)
       
       for(a in home_infs){
@@ -1036,6 +1052,7 @@ run_model = function(time = 30,
         
         # CLASS CONTACTS
         class_trans = run_class(a, df, high_school = high_school, hs.classes = hs.classes)
+        class_trans = 0
         df$location[df$id%in%class_trans] = "Class"
         
         # RANDOM CONTACTS
@@ -1053,6 +1070,7 @@ run_model = function(time = 30,
         
         # SPECIALS CONTACTS
         specials_trans = run_specials(a, df, specials)
+        specials_trans = 0
         df$location[df$id%in%specials_trans] = "Related arts"
         
         # return id if person is infected

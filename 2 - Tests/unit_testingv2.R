@@ -341,22 +341,243 @@ chk_value(type = "A/B", total_days = 2)
 #*************************** TEST RUN_HOUSEHOLD *********************************#
 
 # starting functions
-g = make_school(n_other_adults = 30, synthpop = synthpop,
-                includeFamily = T, n_class = 4)
-h = initialize_school(start = g)
-s = make_schedule(time = 45, type = "base", total_days = 5, df = h)
+test_HH = function(start_type = "child", df = h, sched = s, attack = 1, rel_trans_CC = 0,
+rel_trans_adult = 0, rel_trans = 0, rel_trans_HH = 1, trials = 100, synthpop_val = synthpop, n_class = 4,
+n_other_adults = 30, child_susp = 1, child_trans = 1, teacher_susp = 0, family_susp = 0, mult_asymp = 1,
+seed_asymp = F, p_asymp_child = 0, p_subclin_child = 0, p_asymp_adult = 0, p_subclin_adult = 0){
 
-out = run_model(start_type = "child", df = h, sched = s)
-table(out$t_exposed)
+  g = make_school(n_other_adults = n_other_adults, synthpop = synthpop_val,
+                  includeFamily = T, n_class = n_class)
+ 
 
-out = run_model(start_type = "adult", df = h, sched = s)
-table(out$t_exposed)
+  v1 = rep(0, trials)
+  v2 = rep(0, trials)
+  v3 = rep(0, trials)
+  v4 = rep(0, trials)
+  
+  for(i in 1:trials){
+    h = initialize_school(start = g, attack = attack, child_susp = child_susp, child_trans = child_trans,
+                          rel_trans = rel_trans, rel_trans_brief = 0, rel_trans_HH = rel_trans_HH, 
+                          family_susp = family_susp, teacher_susp = teacher_susp, disperse_transmission = F,
+                          p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child)
+    s = make_schedule(time = 45, type = "Remote", total_days = 5, df = h)
+    
+    out = run_model(start_type = start_type, df = h, sched = s, adult_prob = 75/100000, child_prob = 33/100000,
+                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, mult_asymp = mult_asymp,
+                    days_inf = 5, seed_asymp = seed_asymp)
+    
+    starts = out$id[out$start & out$t_inf > 0 & out$t_end_inf_home >= out$start.time[1] & out$t_inf<45]
+    id_keep = out$HH_id[out$id%in%starts]  
+    
+    chk = floor(out$t_end_inf_home[out$id%in%starts]) - ceiling(out$t_inf[out$id%in%starts]) + 1
+    fam = out[out$HH_id%in%id_keep & !out$id%in%out$id[out$start],]
+    non_fam = out[!out$HH_id%in%id_keep & !out$start,]
+    
+    v1[i] = mean(fam$t_inf!=-1 & fam$t_inf>=out$start.time[1])
+    v2[i] = mean(non_fam$t_inf!=-1 & non_fam$t_inf>out$start.time[1])
+    v3[i] = mean(chk)
+    v4[i] = mean(fam$t_inf!=-1 & fam$t_inf>=out$start.time[1] & fam$source %in% starts)
+    
+  }
+  
+  return(c(mean(v1), mean(v2), mean(v3), mean(v4)))
+}
 
-out = run_model(start_type = "family", df = h, sched = s)
-print(table(out$start.time))
-print(out$HH_id[out$start])
-table(out$t_inf)
-table(out$HH_id[out$t_exposed!=-1])
+sapply(c("family", "child", "adult", "cont"), function(a) test_HH(start_type = a, trials = 100))
+sapply(c("family", "child", "adult"), function(a) test_HH(start_type = a, attack = .1, trials = 200))
+sapply(c("family", "child", "adult"), function(a) test_HH(start_type = a, attack = .1, trials = 200, mult_asymp = .5, seed_asymp = F))
+sapply(c("family", "child", "adult"), function(a) test_HH(start_type = a, attack = .1, trials = 200, mult_asymp = .5, seed_asymp = T))
+sapply(c("family", "child", "adult"), function(a) test_HH(start_type = a, attack = .02, trials = 200, mult_asymp = .5, seed_asymp = T))
+sapply(c("cont"), function(a) test_HH(start_type = a, attack = .1, trials = 100))
+
+sapply(c("family", "child", "adult", "cont"), function(a) test_HH(start_type = a, trials = 100, synthpop_val=synthpop_MS))
+sapply(c("family", "child", "adult", "cont"), function(a) test_HH(start_type = a, trials = 100, synthpop_val=synthpop_HS))
+
+sapply(c("family", "child", "adult"), function(a) test_HH(start_type = a, attack = .1, trials = 200, synthpop_val=synthpop_MS))
+sapply(c("family", "child", "adult"), function(a) test_HH(start_type = a, attack = .1, trials = 200, synthpop_val=synthpop_HS))
+
+
+#*************************** TEST RUN_CLASS *********************************#
+
+# starting functions
+test_class = function(start_type = "child", df = h, sched = s, attack = 1, rel_trans_CC = 0,
+                   rel_trans_adult = 0, rel_trans = 0, rel_trans_HH = 0, trials = 100, synthpop_val = synthpop, n_class = 4,
+                   n_other_adults = 30, child_susp = 1, child_trans = 1, teacher_susp = 0, family_susp = 0, mult_asymp = 1,
+                   seed_asymp = F, p_asymp_child = 0, p_subclin_child = 0, p_asymp_adult = 0, p_subclin_adult = 0, isolate = F,
+                   n_start = 1, high_school = F, time = 30){
+  
+  g = make_school(n_other_adults = n_other_adults, synthpop = synthpop_val,
+                  includeFamily = T, n_class = n_class)
+  
+  
+  v1 = rep(0, trials)
+  v2 = rep(0, trials)
+  v3 = rep(0, trials)
+  v4 = rep(0, trials)
+  v5 = rep(0, trials)
+  for(i in 1:trials){
+    h = initialize_school(start = g, attack = attack, child_susp = child_susp, child_trans = child_trans,
+                          rel_trans = rel_trans, rel_trans_brief = 0, rel_trans_HH = rel_trans_HH, 
+                          family_susp = family_susp, teacher_susp = teacher_susp, disperse_transmission = F,
+                          p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
+                          isolate = isolate)
+    
+    #print(h %>% group_by(adult, family, class==99) %>% summarize(length(id)))
+    
+    s = make_schedule(time = 45, type = "base", total_days = 5, df = h)
+    
+    out = run_model(start_type = start_type, df = h, sched = s, adult_prob = 75/100000, child_prob = 33/100000,
+                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, mult_asymp = mult_asymp,
+                    days_inf = 5, seed_asymp = seed_asymp, n_start = n_start, high_school = high_school, time = time)
+    
+    starts = out$id[out$start & out$t_inf > 0 & out$t_end_inf_home >= out$start.time[1] & out$t_inf<45]
+    id_keep = out$class[out$id%in%starts]  
+
+    chk = floor(out$t_end_inf_home[out$id%in%starts]) - ceiling(out$t_inf[out$id%in%starts]) + 1
+    fam = out[out$class%in%id_keep & !out$id%in%out$id[out$start],]
+    non_fam = out[!out$class%in%id_keep & !out$start,]
+    
+    v1[i] = mean(fam$t_inf!=-1 & fam$t_inf>=out$start.time[1])
+    v2[i] = mean(non_fam$t_inf!=-1 & non_fam$t_inf>out$start.time[1])
+    v3[i] = mean(chk)
+    v4[i] = mean(fam$t_inf!=-1 & fam$t_inf>=out$start.time[1] & fam$source %in% starts)
+    v5[i] = sum(out$t_exposed!=-1 & !out$start)
+    
+  }
+  
+  return(c(mean(v1), mean(v2), mean(v3), mean(v4), mean(v5)))
+}
+
+sapply(c("family", "child", "teacher"), function(a) test_class(start_type = a, trials = 20))
+sapply(c("family", "child", "teacher"), function(a) test_class(start_type = a, trials = 20, n_start = 2))
+sapply(c("adult"), function(a) test_class(start_type = a, trials = 20)) # 24/54 are teachers
+
+sapply(c("family", "child", "teacher"), function(a) test_class(start_type = a, attack = .1, trials = 20, n_start = 2))
+sapply(c("family", "child", "teacher"), function(a) test_class(start_type = a, attack = .1, trials = 20, n_start = 2, child_susp = .5))
+sapply(c("family", "child", "teacher"), function(a) test_class(start_type = a, attack = .1, trials = 20, n_start = 2, child_susp = .5, child_trans = .5))
+
+# 5/7*5 = 3.57
+# 1-.9^3.57 = 31%
+# 1-.95^3.57 = 17%
+# 1-.975^3.57 = 9%
+
+sapply(c("family", "child", "teacher"), function(a) test_class(start_type = a, trials = 20, synthpop_val = synthpop_HS, high_school = T, n_class = 16))
+sapply(c("child"), function(a) test_class(start_type = a, trials = 1, synthpop_val = synthpop_HS, high_school = T, rel_trans = 1, n_class = 16, time = 1))
+# toggle line 417 to test
+sapply(c("child"), function(a) test_class(start_type = a, trials = 10, synthpop_val = synthpop_HS, high_school = T, attack = .1, rel_trans = 1/8, n_class = 16, time = 1))
+# 5/7*.1*1/8*180
+sapply(c("child"), function(a) test_class(start_type = a, trials = 10, synthpop_val = synthpop_HS, high_school = T, attack = .5, rel_trans = 1/8, n_class = 16, time = 1))
+# 5/7*.5*1/8*140
+
+#*************************** TEST RUN_RAND *************************************#
+#* Check the timing as well
+
+test_rand = function(start_type = "child", df = h, sched = s, attack = 1, rel_trans_CC = 0,
+                      rel_trans_adult = 0, rel_trans = 0, rel_trans_HH = 0, trials = 100, synthpop_val = synthpop, n_class = 4,
+                      n_other_adults = 30, child_susp = 1, child_trans = 1, teacher_susp = 0, family_susp = 0, mult_asymp = 1,
+                      seed_asymp = F, p_asymp_child = 0, p_subclin_child = 0, p_asymp_adult = 0, p_subclin_adult = 0, isolate = F,
+                      n_start = 1, high_school = F, time = 30, time_seed_inf = 1, n_contact = 10){
+  
+  g = make_school(n_other_adults = n_other_adults, synthpop = synthpop_val,
+                  includeFamily = T, n_class = n_class)
+  
+  v5 = rep(0, trials)
+  for(i in 1:trials){
+    h = initialize_school(start = g, attack = attack, child_susp = child_susp, child_trans = child_trans,
+                          rel_trans = rel_trans, rel_trans_brief = 0, rel_trans_HH = rel_trans_HH, 
+                          family_susp = family_susp, teacher_susp = teacher_susp, disperse_transmission = F,
+                          p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
+                          isolate = isolate, n_contacts = n_contact)
+    
+    #print(h %>% group_by(adult, family, class==99) %>% summarize(length(id)))
+    
+    s = make_schedule(time = 45, type = "base", total_days = 5, df = h)
+    
+    out = run_model(start_type = start_type, df = h, sched = s, adult_prob = 75/100000, child_prob = 33/100000,
+                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, mult_asymp = mult_asymp,
+                    days_inf = 5, seed_asymp = seed_asymp, n_start = n_start, high_school = high_school, 
+                    time = time, time_seed_inf = time_seed_inf)
+    
+    starts = out$id[out$start & out$t_inf > 0 & out$t_end_inf_home >= out$start.time[1] & out$t_inf<45]
+    id_keep = out$class[out$id%in%starts]  
+    
+    #print(table(out$t_exposed))
+    print(sum(out$t_exposed==time_seed_inf))
+    #print(table(out$location))
+    v5[i] = sum(out$t_exposed!=-1 & !out$start)
+    
+  }
+  
+  return(c(mean(v5)))
+}
+
+# Comment out class & specials for this test
+sapply(c("family", "child", "teacher", "adult"), function(a) test_rand(start_type = a, rel_trans = 1, trials = 20, time = 1))
+sapply(c("family", "child", "teacher", "adult"), function(a) test_rand(start_type = a, rel_trans = 1, trials = 20, time = 1, n_start = 2))
+sapply(c("family", "child", "teacher", "adult"), function(a) test_rand(start_type = a, rel_trans = 1/5, trials = 100, time = 1))
+sapply(c("child"), function(a) test_rand(start_type = a, rel_trans = 1/5, trials = 100, time = 1, child_susp = .5))
+sapply(c("child"), function(a) test_rand(start_type = a, rel_trans = 1/5, trials = 100, time = 1, child_trans = .5))
+
+sapply(c("family", "child", "teacher", "adult"), function(a) test_rand(start_type = a, rel_trans = 1, trials = 2, time = 5))
+sapply(c("family", "child", "teacher", "adult"), function(a) test_rand(start_type = a, rel_trans = 1, trials = 2, time = 10))
+
+sapply(c("family", "child", "teacher", "adult"), function(a) test_rand(start_type = a, rel_trans = 1, trials = 20, time = 1, n_contact = 5))
+sapply(c("family", "child", "teacher", "adult"), function(a) test_rand(start_type = a, rel_trans = 1, trials = 20, time = 1, n_start = 2, n_contact = 5))
+
+#*************************** TEST RUN_SPECIALS *************************************#
+
+#*************************** TEST MAKE_HS_CLASSES *************************************#
+
+#### HIGH SCHOOL SCHEDULING ####
+# starting functions
+test_make_hs = function(start_type = "child", df = h, sched = s, attack = 1, rel_trans_CC = 0,
+                      rel_trans_adult = 0, rel_trans = 0, rel_trans_HH = 0, trials = 100, synthpop_val = synthpop, n_class = 4,
+                      n_other_adults = 30, child_susp = 1, child_trans = 1, teacher_susp = 0, family_susp = 0, mult_asymp = 1,
+                      seed_asymp = F, p_asymp_child = 0, p_subclin_child = 0, p_asymp_adult = 0, p_subclin_adult = 0, isolate = F,
+                      n_start = 1, high_school = F){
+  
+  g = make_school(n_other_adults = n_other_adults, synthpop = synthpop_val,
+                  includeFamily = T, n_class = n_class)
+  
+  
+  v1 = rep(0, trials)
+  v2 = rep(0, trials)
+  v3 = rep(0, trials)
+  v4 = rep(0, trials)
+  
+  for(i in 1:trials){
+    h = initialize_school(start = g, attack = attack, child_susp = child_susp, child_trans = child_trans,
+                          rel_trans = rel_trans, rel_trans_brief = 0, rel_trans_HH = rel_trans_HH, 
+                          family_susp = family_susp, teacher_susp = teacher_susp, disperse_transmission = F,
+                          p_asymp_child = p_asymp_child, p_subclin_adult = p_subclin_adult, p_subclin_child = p_subclin_child,
+                          isolate = isolate)
+    
+    out = make_hs_classes(df = h, nper = 8)
+  }
+  
+  return(out)
+}
+
+chk = test_make_hs(start_type = a, trials = 1, synthpop_val = synthpop_HS, high_school = T, n_class = 16)
+
+# check distribution by age
+table(chk$class, chk$age)
+table(chk$class)
+table(chk$class[chk$age==0])
+chk %>% group_by(class) %>% summarize(mean(age!=0))
+chk %>% group_by(class) %>% summarize(sum(age==0))
+
+# check that everyone has classes
+p2 = chk %>% group_by(id) %>% summarize(p = length(class))
+table(p2$p)
+
+# number that hsould be included
+dim(synthpop_HS)
+1451+64
+
+# approx number of contacts
+print(length(chk$id[chk$class%in%chk$class[chk$id==29]]))
+print(length(unique(chk$id[chk$class%in%chk$class[chk$id==29]])))
 
 
 #*************************** TEST MULT_RUNS *************************************#
