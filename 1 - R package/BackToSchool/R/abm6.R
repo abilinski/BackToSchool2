@@ -1294,8 +1294,8 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    rapid_test_sens = rapid_test_sens, overdisp_off = F)
     
     time_keep = df$start.time[1]
-    print(time_keep)
-    print(length(time_keep:(time_keep+time-1)))
+    #print(time_keep)
+    #print(length(time_keep:(time_keep+time-1)))
     
     # store output
     keep$all[i] = sum(df$t_inf!=0 & df$t_end_inf_home>=time_keep & df$t_inf <= time_keep + time - 1)
