@@ -1101,12 +1101,12 @@ run_model = function(time = 30,
     # run model for infectious individuals OUTSIDE school
     if(sum(df$trans_outside)>0 & n_HH>0 & (include_weekends | !sched$day[sched$t==t][1]%in%c("Sa", "Su"))) {
       
-      print(sched$day[sched$t==t][1])
+      #print(sched$day[sched$t==t][1])
       if(!bubble){
-        print("got here")
+        #print("got here")
         len = length(unique(df$HH_id[!df$adult & !df$present]))
         tot = ifelse(ceiling(len/n_HH)==0, 1, ceiling(len/n_HH))
-        print(len); print(tot)
+        #print(len); print(tot)
         if(len==0){HHs = 0}else{HHs = unique(df$HH_id[!df$adult & !df$present])}
         care_contacts = data.frame(HH_id = HHs,
                                    cat = sample(rep(1:tot, each = n_HH)[1:len]))

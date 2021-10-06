@@ -366,7 +366,7 @@ seed_asymp = F, p_asymp_child = 0, p_subclin_child = 0, p_asymp_adult = 0, p_sub
                     rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, mult_asymp = mult_asymp,
                     days_inf = 5, seed_asymp = seed_asymp, overdisp_off = overdisp_off)
     
-    print(out$class_trans_prob)
+    #print(out$class_trans_prob)
     starts = out$id[out$start & out$t_inf > 0 & out$t_end_inf_home >= out$start.time[1] & out$t_inf<45]
     id_keep = out$HH_id[out$id%in%starts]  
     
@@ -610,7 +610,7 @@ test_care = function(start_type = "child", df = h, sched = s, attack = 1, rel_tr
     out = run_model(start_type = start_type, df = h, sched = s, adult_prob = 75/100000, child_prob = 33/100000,
                     rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, mult_asymp = mult_asymp,
                     days_inf = 5, seed_asymp = seed_asymp, n_start = n_start, high_school = high_school, 
-                    time = time, time_seed_inf = time_seed_inf, n_staff_contact = n_staff_contact, n_HH = n_HH)
+                    time = time, time_seed_inf = time_seed_inf, n_staff_contact = n_staff_contact, n_HH = n_HH, overdisp_off = T)
     
     starts = out$id[out$start & out$t_inf > 0 & out$t_end_inf_home >= out$start.time[1] & out$t_inf<45]
     id_keep = out$class[out$id%in%starts]  
