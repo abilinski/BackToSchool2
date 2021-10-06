@@ -842,31 +842,24 @@ run_model = function(time = 30,
     id.samp = c(adults, kids)
     df.temp = data.frame(id.samp, time_seed_inf) %>% arrange(id.samp) %>%
       left_join(df, c("id.samp" = "id")) %>% filter(susp!=0)
+    time_seed_inf = 15 # start on Monday with testing
     
-  }
-  
-  # set actual seeds
-  if(!exists("df.temp")){
+    
+  }else{
     
     # compress if time_seed_inf is a vector
     df.temp = data.frame(time_seed_inf, id.samp) # backward compatibility
-    
-    # now below
-    #df.u = df[df$id%in% df.temp$id.samp,]
-    # set up notification
-    #if(notify){class_quarantine = make_quarantine(class_quarantine, df.u, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, hs = high_school, hs.classes = hs.classes)}
-  }
+    }
   
-  if(start_type == "cont") {
-    time_seed_inf = 15 # start on Monday with testing
-  }
   df$start.time = time_seed_inf
   
   # setup
-  df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
-                                                set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, 
-                                                turnaround.time = turnaround.time, overdisp_off = overdisp_off)
-  df$start = df$id %in% df.temp$id.samp
+  if(nrow(df.temp)>0){
+    df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
+                                                  set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, 
+                                                  turnaround.time = turnaround.time, overdisp_off = overdisp_off)
+    df$start = df$id %in% df.temp$id.samp
+    }
 
   # test days
   # if null, make this Monday

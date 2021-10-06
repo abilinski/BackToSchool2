@@ -13,7 +13,7 @@ library(RColorBrewer)
 
 # set working directory
 wd = "~/Dropbox/Schools/Public code/0 - Synthetic Populations/"
-state = "Texas"
+state = "California"
 setwd(paste0(wd, "0 - FRED data/", state))
 
 # read in data

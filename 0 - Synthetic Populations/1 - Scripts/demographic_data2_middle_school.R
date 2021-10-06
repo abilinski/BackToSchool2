@@ -13,7 +13,7 @@ library(RColorBrewer)
 
 # set working directory
 wd = "~/Dropbox/Schools/Public code/0 - Synthetic Populations/"
-state = "Maryland"
+state = "California"
 setwd(paste0(wd, "0 - FRED data/", state))
 
 # read in data
@@ -83,7 +83,7 @@ table(synthpop_MS$age)
 
 # save
 setwd(paste0(wd, "/2 - Output"))
-save(synthpopMS, file = paste0("synthMS", state, ".RData"))
+save(synthpop_MS, file = paste0("synthMS", state, ".RData"))
 
 #### MAKE FIGURE ####
 
