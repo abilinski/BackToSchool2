@@ -479,6 +479,7 @@ run_staff_rand = function(a, df, n_contact, rel_trans_adult = 2){
     contact_take = ifelse(n_contact<=tot, n_contact, tot)
     contact_id = sample(df$id[df$present & df$adult & !df$family], contact_take)
     contacts = df[df$id %in% contact_id & df$id!=a,]
+    #print(dim(contacts))
     
     # determine whether a contact becomes infected
     prob_rand = rbinom(nrow(contacts), size = 1,
@@ -581,12 +582,13 @@ make_quarantine = function(class_quarantine, df.u, quarantine.length = 10, quara
 #' @param mult_asymp multiplier on asymptomatic infection; default is 1
 #' @param seed_asymp when making a seed, force to be asymptomatic; default is false
 #' @param turnaround.time test turnaround time, default = 1 day
+#' @param overdisp_off all overdispersion off; defaults to F
 #'
 #' @return df.u with updated parameters
 #'
 #' @export
 # note to self -- add additional parameters to change around here
-make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = F, turnaround.time = 1){
+make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = F, turnaround.time = 1, overdisp_off = F){
   
   if(is.na(set)){
     #  set infectivity  parameters
@@ -611,7 +613,7 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = 
   
   # add overdispersion
   attack_mult = rlnorm(nrow(df.u), meanlog = log(.84)-log((.84^2+.3)/.84^2)/2, sdlog = sqrt(log((.84^2+.3)/.84^2)))/.84
-  chk = df.u$super_spread & df.u$adult
+  chk = (df.u$super_spread | df.u$adult)*as.numeric(!overdisp_off)
   df.u$class_trans_prob = ifelse(chk, df.u$class_trans_prob*attack_mult, df.u$class_trans_prob)
   
   # adjust for asymptomatic infection if applicable
@@ -727,6 +729,8 @@ make_hs_classes = function(df, nper){
 #' @param rel_trans_adult relative transmission in staff-staff interactions vs. classroom; defaults to 2
 #' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
 #' @param surveillance whether surveillance is underway; defaults to F
+#' @param rapid_test_sens sensitivity of rapid tests, defaults to 80%
+#' @param overdisp_off all overdispersion off; defaults to F
 #' @param version v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2
 #' @param df school data frame from make_school()
 #' @param sched schedule data frame from make_schedule()
@@ -771,6 +775,8 @@ run_model = function(time = 30,
                      version = 2,
                      test_quarantine = F,
                      surveillance = F,
+                     rapid_test_sens = 0.8,
+                     overdisp_off = F,
                      df, sched){
   
   #### SEED MODEL ####
@@ -858,7 +864,8 @@ run_model = function(time = 30,
   
   # setup
   df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
-                                                set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
+                                                set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, 
+                                                turnaround.time = turnaround.time, overdisp_off = overdisp_off)
   df$start = df$id %in% df.temp$id.samp
 
   # test days
@@ -903,7 +910,7 @@ run_model = function(time = 30,
       df$test_type_q = !df$family & ((df$class%in%classes_out$class & (df$group%in%classes_out$group | df$group==99)) | df$symp_now) & df$inc_test
       #print("got to test_q"); print(dim(df)); print(df %>% group_by(vacc) %>% summarize(sum(test_type_q)))
       df$test_ct_q = df$test_ct_q + df$present*as.numeric(df$test_type_q)
-      df$test_q = rbinom(nrow(df), size = 1, prob = 0.8*df$present*df$test_type_q)
+      df$test_q = rbinom(nrow(df), size = 1, prob = rapid_test_sens*df$present*df$test_type_q)
       df$t_end_inf = ifelse(df$inf & df$test_q & df$present, t, df$t_end_inf)
       df$t_notify = ifelse(df$inf & df$test_q & df$present, t+1, df$t_notify)
       df$detected = ifelse(df$inf & df$test_q & df$present, 1, df$detected)
@@ -1052,11 +1059,12 @@ run_model = function(time = 30,
         
         # CLASS CONTACTS
         class_trans = run_class(a, df, high_school = high_school, hs.classes = hs.classes)
-        class_trans = 0
+        #class_trans = 0
         df$location[df$id%in%class_trans] = "Class"
         
         # RANDOM CONTACTS
         rand_trans = tryCatch({run_rand(a, df, random_contacts)}, error = function(err) {0})
+        #rand_trans = 0 
         df$location[df$id%in%rand_trans] = "Random contacts"
         
         # RANDOM ADULT CONTACTS
@@ -1070,7 +1078,7 @@ run_model = function(time = 30,
         
         # SPECIALS CONTACTS
         specials_trans = run_specials(a, df, specials)
-        specials_trans = 0
+        #specials_trans = 0
         df$location[df$id%in%specials_trans] = "Related arts"
         
         # return id if person is infected
@@ -1093,12 +1101,16 @@ run_model = function(time = 30,
     # run model for infectious individuals OUTSIDE school
     if(sum(df$trans_outside)>0 & n_HH>0 & (include_weekends | !sched$day[sched$t==t][1]%in%c("Sa", "Su"))) {
       
+      print(sched$day[sched$t==t][1])
       if(!bubble){
+        print("got here")
         len = length(unique(df$HH_id[!df$adult & !df$present]))
         tot = ifelse(ceiling(len/n_HH)==0, 1, ceiling(len/n_HH))
+        print(len); print(tot)
         if(len==0){HHs = 0}else{HHs = unique(df$HH_id[!df$adult & !df$present])}
         care_contacts = data.frame(HH_id = HHs,
                                    cat = sample(rep(1:tot, each = n_HH)[1:len]))
+        #print(care_contacts)
       }
       
       # run transmission in care groups
@@ -1135,7 +1147,7 @@ run_model = function(time = 30,
     if(sum(df$now>0)){
       
       df$t_exposed[df$now] = t
-      df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp, turnaround.time = turnaround.time)
+      df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp, turnaround.time = turnaround.time, overdisp_off = overdisp_off)
       #print("New exposures:")
       #print(df %>% filter(now) %>% arrange(source) %>% select(id, HH_id, class, group, adult, family, source, location, symp))
     }
@@ -1229,6 +1241,8 @@ run_model = function(time = 30,
 #' @param vax_eff Vaccine efficacy, defaults to 0.9
 #' @param test_quarantine whether quarantined individuals attend school but are tested daily; defaults to FALSE
 #' @param surveillance whether surveillance is underway; defaults to F
+#' @param rapid_test_sens sensitivity of rapid tests, defaults to 80%
+#' @param overdisp_off all overdispersion off; defaults to F
 #' @param no_test_vacc Indicates whether vaccinated individuals are excluded from TTS & screening; defaults to F
 #' @param synthpop synthetic population; defaults to synthpop based on Maryland elementary school
 #' @param class make_school object; defaults to NA and will call for each simulation
@@ -1241,7 +1255,8 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                      n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
-                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, vax_eff = 0.9, surveillance = F, no_test_vacc = F, version = 2){
+                     bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, vax_eff = 0.9, surveillance = F, rapid_test_sens = .8, 
+                     overdisp_off = F, no_test_vacc = F, version = 2){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
@@ -1282,7 +1297,8 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
                    num_adults = num_adults, bubble = bubble, include_weekends = include_weekends, turnaround.time = turnaround.time,
-                   test_start_day = test_start_day, type = type, test_quarantine = test_quarantine, version = version, surveillance = surveillance)
+                   test_start_day = test_start_day, type = type, test_quarantine = test_quarantine, version = version, surveillance = surveillance,
+                   rapid_test_sens = rapid_test_sens, overdisp_off = F)
     
     time_keep = df$start.time[1]
     print(time_keep)
