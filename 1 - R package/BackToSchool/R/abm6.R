@@ -793,15 +793,6 @@ run_model = function(time = 30,
   if(start_type=="child") id.samp = sample(df$id[!df$family & !df$adult], n_start) 
   if(start_type=="family") id.samp = sample(df$id[df$family], n_start) 
   
-  # bubbles
-  if(bubble & n_HH > 0){
-    len = length(unique(df$HH_id[!df$adult]))
-    tot = ifelse(ceiling(len/n_HH)==0, 1, ceiling(len/n_HH))
-    if(len==0){HHs = 0}else{HHs = unique(df$HH_id[!df$adult])}
-    care_contacts = data.frame(HH_id = HHs) %>% mutate(group = df$group[!df$adult & df$HH_id==HH_id][1]) %>% group_by(group) %>% 
-      mutate(cat = sample(rep(1:tot, each = n_HH)[1:len]))
-  }
-  
   # set up scheduling if high school
   hs.classes = NA
   if(high_school){
@@ -938,6 +929,7 @@ run_model = function(time = 30,
     # infectious and at school
     df$trans_now = df$present & df$inf & !df$family
     df$trans_outside = !df$present & df$inf & !df$class%in%classes_out$class & !df$HH_id%in%df$HH_id[df$class%in%classes_out$class] & (!df$adult | df$family)#& !df$family
+    df$mix_outside = !df$present & !df$class%in%classes_out$class & !df$HH_id%in%df$HH_id[df$class%in%classes_out$class] & (!df$adult | df$family)#& !df$family
     if(high_school){
       df$trans_outside = !df$present & df$inf & (!df$adult | df$family)
       if(nrow(classes_out)>0) df$trans_outside = df$trans_outside & df$nq
@@ -1092,27 +1084,29 @@ run_model = function(time = 30,
     }
     
     # run model for infectious individuals OUTSIDE school
-    if(sum(df$trans_outside)>0 & n_HH>0 & (include_weekends | !sched$day[sched$t==t][1]%in%c("Sa", "Su"))) {
+    HHs = unique(df$HH_id[!df$adult & df$mix_outside])
+    len = length(HHs)
+    if(sum(df$trans_outside)>0 & n_HH>0 & len > 1 &
+       (include_weekends | !sched$day[sched$t==t][1]%in%c("Sa", "Su"))) {
       
       #print(sched$day[sched$t==t][1])
       if(!bubble){
-        #print("got here")
-        len = length(unique(df$HH_id[!df$adult & !df$present]))
-        tot = ifelse(ceiling(len/n_HH)==0, 1, ceiling(len/n_HH))
-        #print(len); print(tot)
-        if(len==0){HHs = 0}else{HHs = unique(df$HH_id[!df$adult & !df$present])}
+        
+        # how many households are around
+        tot = ceiling(len/n_HH)
+        
+        # care contacts
         care_contacts = data.frame(HH_id = HHs,
                                    cat = sample(rep(1:tot, each = n_HH)[1:len]))
-        #print(care_contacts)
       }
       
       # run transmission in care groups
       non_school_infs = df$id[df$trans_outside]
-      if(sum(df$trans_outside > 1)) school_infs = sample(non_school_infs)
+      if(sum(df$trans_outside > 1)) non_school_infs = sample(non_school_infs)
       
       # choose contacts that become infected
       for(a in non_school_infs){
-        
+      
         # CARE CONTACTS
         care_trans = run_care(a, df, care_contacts, rel_trans_CC, num_adults = num_adults)
         df$location[df$id%in%care_trans] = "Child care"
