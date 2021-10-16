@@ -173,6 +173,7 @@ make_school = function(
 #' @param n_contacts Number of sustained contacts outside of the classroom; defaults to 10
 #' @param n_contacts_brief Number of brief contacts outside of the classroom; defaults to 0
 #' @param rel_trans_HH Relative attack rate of household contact (vs. classrom); defaults to 1
+#' @param rel_trans_HH_child Additional relative attack rate of an infected child; defaults to 1
 #' @param rel_trans Relative attack rate of sustained contact (vs. classroom); defaults to 1/8
 #' @param rel_trans_brief Relative attack rate of brief contact (vs. classroom); defaults to 1/50
 #' @param p_asymp_adult Fraction of adults with asymptomatic disease; defaults to 0.4
@@ -198,7 +199,7 @@ make_school = function(
 #' @return out data frame of child and teacher attributes.
 #'
 #' @export
-initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1,
+initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1, rel_trans_HH_child = 1,
                              rel_trans = 1/8, rel_trans_brief = 1/50, p_asymp_adult = .35,
                              p_asymp_child = .7, p_subclin_adult = 0, p_subclin_child  = 0,
                              attack = .01, child_trans = 1, child_susp = .5, family_susp = 1,
@@ -236,7 +237,7 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            n_contact = n_contacts,
            n_contact_brief = n_contacts_brief,
            relative_trans = rel_trans,
-           relative_trans_HH = rel_trans_HH,
+           relative_trans_HH = rel_trans_HH*ifelse(adult, 1, rel_trans_HH_child),
            relative_trans_brief = rel_trans_brief,
            attack_rate = attack,
            dedens = dedens,
@@ -906,7 +907,7 @@ run_model = function(time = 30,
     
     # re-estimated who is present
     df$present = sched$present[sched$t==t] & !df$q_out & !df$HH_id%in%df$HH_id[df$q_out]
-    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home >= t
+    df$inf_home = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf_home >= t & !df$start
     df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf >= t
     
     if(high_school & nrow(classes_out)>0){
@@ -1174,6 +1175,7 @@ run_model = function(time = 30,
 #' @param n_contacts Number of sustained contacts outside of the classroom; defaults to 10
 #' @param n_contacts_brief Number of brief contacts outside of the classroom; defaults to 20
 #' @param rel_trans_HH Relative attack rate of household contact (vs. classrom); defaults to 1
+#' @param rel_trans_HH_child Additional relative attack rate of an infected child; defaults to 1
 #' @param rel_trans Relative attack rate of sustained contact (vs. classroom); defaults to 1/8
 #' @param rel_trans_brief Relative attack rate of brief contact (vs. classroom); defaults to 1/50
 #' @param rel_trans_CC relative transmission in childcare vs. classroom; defaults to 2
@@ -1243,7 +1245,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
                      bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, vax_eff = 0.9, surveillance = F, rapid_test_sens = .8, 
-                     overdisp_off = F, no_test_vacc = F, version = 2){
+                     overdisp_off = F, no_test_vacc = F, rel_trans_HH_child = 2, version = 2){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
@@ -1271,7 +1273,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                                attack = attack, child_trans = child_trans, child_susp = child_susp, child_vax = child_vax, family_susp = family_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
                                isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify, 
-                               no_test_vacc = no_test_vacc)
+                               no_test_vacc = no_test_vacc, rel_trans_HH_child = rel_trans_HH_child)
     
     ## make schedule
     sched = make_schedule(time = time + 15, df = school, type = type, total_days = total_days)
