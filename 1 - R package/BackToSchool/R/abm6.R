@@ -516,7 +516,7 @@ run_care = function(a, df, care_contacts, rel_trans_CC = 2, num_adults = 2){
   adults = contacts$id[contacts$adult]
   if(num_adults < length(adults)) {keep = sample(adults, num_adults)
   }else{keep = adults}
-  contacts = contacts %>% filter(!adult | id %in% keep) %>% filter(HH_id!=df$HH_id[df$id==a])
+  contacts = contacts[which((!(contacts$adult) | contacts$id %in% keep) & (contacts$HH_id != df$HH_id[df$id==a])),]
   
   if(!df$adult[df$id==a] | a %in% keep){
     
