@@ -173,7 +173,7 @@ make_school = function(
 #' @param n_contacts Number of sustained contacts outside of the classroom; defaults to 10
 #' @param n_contacts_brief Number of brief contacts outside of the classroom; defaults to 0
 #' @param rel_trans_HH Relative attack rate of household contact (vs. classrom); defaults to 1
-#' @param rel_trans_HH_symp_child Additional relative attack rate of a symptomatic infected child in the household; defaults to 1
+#' @param rel_trans_HH_child Additional relative attack rate of an infected child; defaults to 1
 #' @param rel_trans Relative attack rate of sustained contact (vs. classroom); defaults to 1/8
 #' @param rel_trans_brief Relative attack rate of brief contact (vs. classroom); defaults to 1/50
 #' @param p_asymp_adult Fraction of adults with asymptomatic disease; defaults to 0.4
@@ -199,7 +199,7 @@ make_school = function(
 #' @return out data frame of child and teacher attributes.
 #'
 #' @export
-initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1, rel_trans_HH_symp_child = 1,
+initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH = 1, rel_trans_HH_child = 1,
                              rel_trans = 1/8, rel_trans_brief = 1/50, p_asymp_adult = .35,
                              p_asymp_child = .7, p_subclin_adult = 0, p_subclin_child  = 0,
                              attack = .01, child_trans = 1, child_susp = .5, family_susp = 1,
@@ -237,8 +237,7 @@ initialize_school = function(n_contacts = 10, n_contacts_brief = 0, rel_trans_HH
            n_contact = n_contacts,
            n_contact_brief = n_contacts_brief,
            relative_trans = rel_trans,
-           relative_trans_HH = rel_trans_HH,
-           relative_trans_HH_symp_child = ifelse(adult, 1, rel_trans_HH_symp_child),
+           relative_trans_HH = rel_trans_HH*ifelse(adult, 1, rel_trans_HH_child),
            relative_trans_brief = rel_trans_brief,
            attack_rate = attack,
            dedens = dedens,
@@ -517,6 +516,7 @@ run_care = function(a, df, care_contacts, rel_trans_CC = 2, num_adults = 2){
   adults = contacts$id[contacts$adult]
   if(num_adults < length(adults)) {keep = sample(adults, num_adults)
   }else{keep = adults}
+  #contacts = contacts %>% filter(!adult | id %in% keep) %>% filter(HH_id!=df$HH_id[df$id==a])
   contacts = contacts[which((!(contacts$adult) | contacts$id %in% keep) & (contacts$HH_id != df$HH_id[df$id==a])),]
   
   if(!df$adult[df$id==a] | a %in% keep){
@@ -581,8 +581,7 @@ make_quarantine = function(class_quarantine, df.u, quarantine.length = 10, quara
 #' @param a id of infected individual
 #' @param df school data frame from make_school()
 #' @param set indication of seeding model vs. creating infections
-#' @param mult_asymp multiplier on asymptomatic infection for adults; default is 1
-#' @param mult_asymp_child multiplier on asymptomatic infection for children; default is 1
+#' @param mult_asymp multiplier on asymptomatic infection; default is 1
 #' @param seed_asymp when making a seed, force to be asymptomatic; default is false
 #' @param turnaround.time test turnaround time, default = 1 day
 #' @param overdisp_off all overdispersion off; defaults to F
@@ -591,7 +590,7 @@ make_quarantine = function(class_quarantine, df.u, quarantine.length = 10, quara
 #'
 #' @export
 # note to self -- add additional parameters to change around here
-make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, mult_asymp_child = 1, seed_asymp = F, turnaround.time = 1, overdisp_off = F){
+make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, seed_asymp = F, turnaround.time = 1, overdisp_off = F){
   
   if(is.na(set)){
     #  set infectivity  parameters
@@ -620,8 +619,7 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, mult_asymp_ch
   df.u$class_trans_prob = ifelse(chk, df.u$class_trans_prob*attack_mult, df.u$class_trans_prob)
   
   # adjust for asymptomatic infection if applicable
-  df.u$class_trans_prob = ifelse(!df.u$symp, ifelse(df.u$adult, df.u$class_trans_prob*mult_asymp, df.u$class_trans_prob*mult_asymp_child), df.u$class_trans_prob)
-  df.u$relative_trans_HH = ifelse(df.u$symp, df.u$relative_trans_HH*df.u$relative_trans_HH_symp_child, df.u$relative_trans_HH)
+  df.u$class_trans_prob = ifelse(!df.u$symp, df.u$class_trans_prob*mult_asymp, df.u$class_trans_prob)
   
   # add end time
   df.u$t_end_inf_home = df.u$t_inf +
@@ -713,8 +711,7 @@ make_hs_classes = function(df, nper){
 #' @param n_HH number of households a household interacts with when not attending school; defaults to 0
 #' @param bubble whether out-of-school interactions occur with a 'bubble'; defaults to F
 #' @param n_start number of infections to seed model; defaults to 1
-#' @param mult_asymp multiplier on asymptomatic infection for adults; default is 1
-#' @param mult_asymp_child multiplier on asymptomatic infection for children; default is 1
+#' @param mult_asymp multiplier on asymptomatic infection; default is 1
 #' @param days_inf length of infectious period (assuming mild case or quarantined on symptoms)
 #' @param seed_asymp whether to seed with an asymptomatic case
 #' @param time_seed_inf time(s) at which to introduce new infectious individuals; defaults to NA and randomly selects one time
@@ -760,7 +757,6 @@ run_model = function(time = 30,
                      n_start = 1,
                      days_inf = 6,
                      mult_asymp = 1,
-                     mult_asymp_child = 1,
                      seed_asymp = F,
                      time_seed_inf = NA,
                      high_school = F,
@@ -853,8 +849,7 @@ run_model = function(time = 30,
   # setup
   if(nrow(df.temp)>0){
     df[df$id%in%df.temp$id.samp,] = make_infected(df.u = df[df$id%in%df.temp$id.samp,], days_inf = days_inf,
-                                                  set = df.temp$time_seed_inf, seed_asymp = seed_asymp,
-                                                  mult_asymp = mult_asymp, mult_asymp_child = mult_asymp_child,
+                                                  set = df.temp$time_seed_inf, seed_asymp = seed_asymp, mult_asymp = mult_asymp, 
                                                   turnaround.time = turnaround.time, overdisp_off = overdisp_off)
     df$start = df$id %in% df.temp$id.samp
     }
@@ -1141,7 +1136,7 @@ run_model = function(time = 30,
     if(sum(df$now>0)){
       
       df$t_exposed[df$now] = t
-      df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp, mult_asymp_child = mult_asymp_child, turnaround.time = turnaround.time, overdisp_off = overdisp_off)
+      df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp, turnaround.time = turnaround.time, overdisp_off = overdisp_off)
       #print("New exposures:")
       #print(df %>% filter(now) %>% arrange(source) %>% select(id, HH_id, class, group, adult, family, source, location, symp))
     }
@@ -1181,7 +1176,7 @@ run_model = function(time = 30,
 #' @param n_contacts Number of sustained contacts outside of the classroom; defaults to 10
 #' @param n_contacts_brief Number of brief contacts outside of the classroom; defaults to 20
 #' @param rel_trans_HH Relative attack rate of household contact (vs. classrom); defaults to 1
-#' @param rel_trans_HH_symp_child Additional relative attack rate of a symptomatic infected child in the household; defaults to 1
+#' @param rel_trans_HH_child Additional relative attack rate of an infected child; defaults to 1
 #' @param rel_trans Relative attack rate of sustained contact (vs. classroom); defaults to 1/8
 #' @param rel_trans_brief Relative attack rate of brief contact (vs. classroom); defaults to 1/50
 #' @param rel_trans_CC relative transmission in childcare vs. classroom; defaults to 2
@@ -1204,8 +1199,7 @@ run_model = function(time = 30,
 #' @param n_start number of infections to seed model; defaults to 1
 #' @param time_seed_inf time(s) at which to introduce new infectious individuals; defaults to NA and randomly selects one time
 #' @param days_inf length of infectious period (assuming mild case or quarantined on symptoms)
-#' @param mult_asymp multiplier on asymptomatic infection for adults; default is 1
-#' @param mult_asymp_child multiplier on asymptomatic infection for children; default is 1
+#' @param mult_asymp multiplier on asymptomatic infection; default is 1
 #' @param seed_asymp whether to seed with an asymptomatic case
 #' @param isolate Whether symptomatic individuals isolate when symptoms emerge; defaults to T
 #' @param dedens Whether dedensification measures reduce attack rate; defaults to F
@@ -1248,11 +1242,11 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                      rel_trans = 1/8, rel_trans_brief = 1/50, rel_trans_CC = 2, rel_trans_adult = 2, p_asymp_adult = .4, child_prob = 0.05, adult_prob = 0.01,
                      p_asymp_child = .8, attack = .01, child_trans = 1, child_susp = .5, child_vax = 0, p_subclin_adult = 0, p_subclin_child = 0,
                      teacher_trans = 1, teacher_susp = .8, disperse_transmission = T, n_staff_contact = 0, n_HH = 0, num_adults = 2, family_susp = .7,
-                     n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, mult_asymp_child = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
+                     n_start = 1, time_seed_inf = NA, days_inf = 6, mult_asymp = 1, seed_asymp = F, isolate = T, dedens = 0, run_specials_now = F,
                      time = 30, notify = F, test = F, test_sens =  .7, test_frac = .9, test_days = "week", test_type = "all", quarantine.length = 10, quarantine.grace = 3,
                      type = "base", total_days = 5, includeFamily = T, synthpop = synthpop, class = NA, n_class = 4, high_school = F, nper = 8, start_mult = 1, start_type = "mix",
                      bubble = F, include_weekends = T, turnaround.time = 1, test_start_day = 1, test_quarantine = F, vax_eff = 0.9, surveillance = F, rapid_test_sens = .8, 
-                     overdisp_off = F, no_test_vacc = F, rel_trans_HH_symp_child = 2, version = 2){
+                     overdisp_off = F, no_test_vacc = F, rel_trans_HH_child = 2, version = 2){
   
   keep = data.frame(all = numeric(N), tot = numeric(N), R0 = numeric(N), Rt = numeric(N), start = numeric(N), start_adult = numeric(N), asymp_kids = numeric(N),
                     source_asymp = numeric(N), source_asymp_family_kids = numeric(N), source_asymp_family_staff = numeric(N), start_family = numeric(N),
@@ -1280,7 +1274,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
                                attack = attack, child_trans = child_trans, child_susp = child_susp, child_vax = child_vax, family_susp = family_susp,
                                teacher_trans = teacher_trans, teacher_susp = teacher_susp, disperse_transmission = disperse_transmission,
                                isolate = isolate, dedens = dedens, run_specials = run_specials_now, start = class, vax_eff = vax_eff, notify = notify, 
-                               no_test_vacc = no_test_vacc, rel_trans_HH_symp_child = rel_trans_HH_symp_child)
+                               no_test_vacc = no_test_vacc, rel_trans_HH_child = rel_trans_HH_child)
     
     ## make schedule
     sched = make_schedule(time = time + 15, df = school, type = type, total_days = total_days)
@@ -1288,7 +1282,7 @@ mult_runs = function(N = 500, n_other_adults = 30, n_contacts = 10, n_contacts_b
     ## run model
     df = run_model(time = time, notify = notify, test = test, df = school, sched = sched, 
                    test_sens = test_sens, test_frac = test_frac, test_days = test_days, days_inf = days_inf,
-                   mult_asymp = mult_asymp, mult_asymp_child = mult_asymp_child, seed_asymp = seed_asymp, n_HH = n_HH, n_staff_contact = n_staff_contact,
+                   mult_asymp = mult_asymp, seed_asymp = seed_asymp, n_HH = n_HH, n_staff_contact = n_staff_contact,
                    n_start = n_start, time_seed_inf = time_seed_inf, high_school = high_school, nper = nper, 
                    start_mult = start_mult, start_type = start_type, child_prob = child_prob, adult_prob = adult_prob, test_type = test_type,
                    rel_trans_CC = rel_trans_CC, rel_trans_adult = rel_trans_adult, quarantine.length = quarantine.length, quarantine.grace = quarantine.grace, 
