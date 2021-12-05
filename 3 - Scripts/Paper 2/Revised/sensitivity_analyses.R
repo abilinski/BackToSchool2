@@ -4,7 +4,7 @@
 source("functions.R")
 
 # local
-wd = paste0("/users/abilinsk/data/abilinsk/Schools/", level, "_1_Dec_Sens_", version)
+wd = paste0("/users/abilinsk/data/abilinsk/Schools/", level, "_1_Dec_Sens")
 setwd(wd)
 
 # fixed parameters
