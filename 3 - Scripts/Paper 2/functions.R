@@ -34,7 +34,6 @@ sims = function(df, i, synthpop, class = NA){
                   child_vax = df$child_vax[i], no_test_vacc = df$no_test_vacc[i]) %>%
     mutate(id = df$scenario[i], i = i, sim = df$sim[i])
 
-  out = out %>% bind_cols(df[i,])
   save(out, file = paste0("results", i, "_", Sys.time(), ".RData"))
   print(i)
   rm(out); gc()

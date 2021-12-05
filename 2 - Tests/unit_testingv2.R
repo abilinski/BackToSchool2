@@ -1060,16 +1060,16 @@ test_make_infected1 = function(quarantine.length = 14, quarantine.grace = 3, npe
     v1[i] = sum(out$symp)
     v2[i] = sum(out$p_asymp)
     v3[i] = sum(out$sub_clin)
-    v4[i] = mean(floor(out$t_end_inf[out$t_exposed>=0])-ceiling(out$t_inf[out$t_exposed>=0]) + 1) 
-    v5[i] = mean(floor(out$t_end_inf_home[out$t_exposed>=0])-ceiling(out$t_inf[out$t_exposed>=0]) + 1) 
-    v6[i] = mean(ceiling(out$t_notify[out$t_exposed>=0])-ceiling(out$t_inf[out$t_exposed>=0]) + 1)
+    v4[i] = mean(floor(out$t_end_inf[out$t_inf!=-1])-ceiling(out$t_inf[out$t_inf!=-1]) + 1) 
+    v5[i] = mean(floor(out$t_end_inf_home[out$t_inf!=-1])-ceiling(out$t_inf[out$t_inf!=-1]) + 1) 
+    v6[i] = mean(ceiling(out$t_notify[out$t_inf!=-1])-ceiling(out$t_inf[out$t_inf!=-1]) + 1)
     v7[i] = mean(out$class_trans_prob)
     v8[i] = mean(out$relative_trans_HH)
-    v9[i] = mean(out$t_exposed>=0)
-    v10[i] = mean(out$t_symp[out$t_exposed>=0]-out$t_inf[out$t_exposed>=0])
-    v11[i] = mean(out$t_symp[out$t_exposed>=0]-out$t_exposed[out$t_exposed>=0])
-    v12[i] = mean(out$t_inf[out$t_exposed>=0]-out$t_exposed[out$t_exposed>=0])
-    v13[i] = mean(ceiling(out$t_notify[out$t_exposed>=0])-floor(out$t_end_inf[out$t_exposed>=0])) #floor(out$t_end_inf[out$t_exposed>=0])
+    v9[i] = mean(out$t_inf!=-1)
+    v10[i] = mean(out$t_symp[out$t_inf!=-1]-out$t_inf[out$t_inf!=-1])
+    v11[i] = mean(out$t_symp[out$t_inf!=-1]-out$t_exposed[out$t_inf!=-1])
+    v12[i] = mean(out$t_inf[out$t_inf!=-1]-out$t_exposed[out$t_inf!=-1])
+    v13[i] = mean(ceiling(out$t_notify[out$t_inf!=-1])-floor(out$t_end_inf[out$t_inf!=-1])) #floor(out$t_end_inf[out$t_inf!=-1])
   }
   
   return(data.frame(symp = mean(v1),
@@ -1104,7 +1104,7 @@ g1 = t(sapply(1:nrow(run), function(a) test_make_infected1(isolate = run$isolate
                                                           p_subclin_child = run$p_subclin_child[a],
                                                           mult_asymp_child = run$mult_asymp_child[a],
                                                           rel_trans_HH_symp_child = run$rel_trans_HH_symp_child[a],
-                                                          trials = 200, set = 5)))
+                                                          trials = 200, set = 10)))
 
 # adults
 run = expand_grid(notify = c(T,F), isolate = c(T,F), 
@@ -1282,4 +1282,11 @@ run_parallel(df_SENS1[1,], synthpop, class = class)
 # saves 30 days of output
 
 #*************************** ADDITIONAL TESTS *********************************#
+
+mean(out$start_kids) 
+child_prob*45
+
+
+mean(out$start_adults) 
+adult_prob*45
 
