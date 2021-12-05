@@ -9,18 +9,24 @@ make_infected(
   days_inf,
   set = NA,
   mult_asymp = 1,
+  mult_asymp_child = 1,
   seed_asymp = F,
-  turnaround.time = 1
+  turnaround.time = 1,
+  overdisp_off = F
 )
 }
 \arguments{
 \item{set}{indication of seeding model vs. creating infections}
 
-\item{mult_asymp}{multiplier on asymptomatic infection; default is 1}
+\item{mult_asymp}{multiplier on asymptomatic infection for adults; default is 1}
+
+\item{mult_asymp_child}{multiplier on asymptomatic infection for children; default is 1}
 
 \item{seed_asymp}{when making a seed, force to be asymptomatic; default is false}
 
 \item{turnaround.time}{test turnaround time, default = 1 day}
+
+\item{overdisp_off}{all overdispersion off; defaults to F}
 
 \item{a}{id of infected individual}
 

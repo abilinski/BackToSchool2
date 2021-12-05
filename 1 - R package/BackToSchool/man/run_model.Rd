@@ -17,6 +17,7 @@ run_model(
   n_start = 1,
   days_inf = 6,
   mult_asymp = 1,
+  mult_asymp_child = 1,
   seed_asymp = F,
   time_seed_inf = NA,
   high_school = F,
@@ -38,6 +39,8 @@ run_model(
   version = 2,
   test_quarantine = F,
   surveillance = F,
+  rapid_test_sens = 0.8,
+  overdisp_off = F,
   df,
   sched
 )
@@ -48,6 +51,8 @@ run_model(
 \item{notify}{whether classrooms are notified and quarantined; defaults to F}
 
 \item{test}{whether there is weekly testing; defaults to F}
+
+\item{test_days}{test frequency; "day", "week", "2x_week"; defaults to "week"}
 
 \item{test_sens}{test sensitivity; defaults to 0.7}
 
@@ -63,7 +68,9 @@ run_model(
 
 \item{days_inf}{length of infectious period (assuming mild case or quarantined on symptoms)}
 
-\item{mult_asymp}{multiplier on asymptomatic infection; default is 1}
+\item{mult_asymp}{multiplier on asymptomatic infection for adults; default is 1}
+
+\item{mult_asymp_child}{multiplier on asymptomatic infection for children; default is 1}
 
 \item{seed_asymp}{whether to seed with an asymptomatic case}
 
@@ -79,9 +86,17 @@ run_model(
 
 \item{test_type}{group tested; defaults to "all", also allows "staff" and "students"}
 
+\item{adult_prob}{if start_type = "cont", set daily probability of infectious entry for adults, defaults to .01}
+
+\item{child_prob}{if start_type = "cont", set daily probability of infectious entry for children, defaults to .05}
+
 \item{quarantine.length}{length of quarantine when someone is infectious; defaults to 10}
 
 \item{quarantine.grace}{length of grace period after which a quarantined class returns not to be "re-quarantined"}
+
+\item{rel_trans_CC}{relative transmission in childcare vs. classroom; defaults to 2}
+
+\item{rel_trans_adult}{relative transmission in staff-staff interactions vs. classroom; defaults to 2}
 
 \item{num_adults}{number of adults interacting with children, defaults to 2}
 
@@ -98,6 +113,10 @@ run_model(
 \item{test_quarantine}{whether quarantined individuals attend school but are tested daily; defaults to FALSE}
 
 \item{surveillance}{whether surveillance is underway; defaults to F}
+
+\item{rapid_test_sens}{sensitivity of rapid tests, defaults to 80\%}
+
+\item{overdisp_off}{all overdispersion off; defaults to F}
 
 \item{df}{school data frame from make_school()}
 

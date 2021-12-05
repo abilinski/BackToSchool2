@@ -8,6 +8,7 @@ initialize_school(
   n_contacts = 10,
   n_contacts_brief = 0,
   rel_trans_HH = 1,
+  rel_trans_HH_symp_child = 1,
   rel_trans = 1/8,
   rel_trans_brief = 1/50,
   p_asymp_adult = 0.35,
@@ -27,7 +28,8 @@ initialize_school(
   run_specials = F,
   start,
   vax_eff = 0.9,
-  notify = T
+  notify = T,
+  no_test_vacc = F
 )
 }
 \arguments{
@@ -36,6 +38,8 @@ initialize_school(
 \item{n_contacts_brief}{Number of brief contacts outside of the classroom; defaults to 0}
 
 \item{rel_trans_HH}{Relative attack rate of household contact (vs. classrom); defaults to 1}
+
+\item{rel_trans_HH_symp_child}{Additional relative attack rate of a symptomatic infected child in the household; defaults to 1}
 
 \item{rel_trans}{Relative attack rate of sustained contact (vs. classroom); defaults to 1/8}
 
@@ -71,11 +75,13 @@ initialize_school(
 
 \item{run_specials}{Whether special subjects are run; defaults to F}
 
-\item{start}{Data frame from make_class()}
+\item{start}{Data frame from make_school()}
 
 \item{vax_eff}{Vaccine efficacy, defaults to 0.9}
 
 \item{notify}{Whether classrooms are notified following a positive test; defaults to T}
+
+\item{no_test_vacc}{Indicates whether vaccinated individuals are excluded from TTS & screening; defaults to F}
 }
 \value{
 out data frame of child and teacher attributes.

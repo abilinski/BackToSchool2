@@ -5,66 +5,71 @@
 \title{Run model multiple times and summarize results}
 \usage{
 mult_runs(
-  N = 500,
-  n_other_adults = 30,
-  n_contacts = 10,
+  N,
+  n_other_adults,
+  n_contacts,
+  rel_trans_HH,
+  rel_trans,
+  rel_trans_CC,
+  rel_trans_adult,
+  p_asymp_adult,
+  child_prob,
+  adult_prob,
+  p_asymp_child,
+  attack,
+  child_trans,
+  child_susp,
+  child_vax,
+  p_subclin_adult,
+  p_subclin_child,
+  teacher_susp,
+  disperse_transmission,
+  n_staff_contact,
+  n_HH,
+  num_adults,
+  family_susp,
+  n_start,
+  time_seed_inf,
+  days_inf,
+  mult_asymp,
+  mult_asymp_child,
+  seed_asymp,
+  isolate,
+  dedens,
+  run_specials_now,
+  time,
+  notify,
+  test,
+  test_sens,
+  test_frac,
+  test_days,
+  test_type,
+  quarantine.length,
+  quarantine.grace,
+  type,
+  total_days,
+  includeFamily,
+  synthpop,
+  class,
+  n_class,
+  high_school,
+  nper,
+  start_mult,
+  start_type,
+  include_weekends,
+  turnaround.time,
+  test_start_day,
+  test_quarantine,
+  vax_eff,
+  surveillance,
+  rapid_test_sens,
+  overdisp_off,
+  no_test_vacc,
+  rel_trans_HH_symp_child,
+  teacher_trans,
   n_contacts_brief = 0,
-  rel_trans_HH = 1,
-  rel_trans = 1/8,
   rel_trans_brief = 1/50,
-  rel_trans_CC = 2,
-  rel_trans_adult = 2,
-  p_asymp_adult = 0.4,
-  child_prob = 0.05,
-  adult_prob = 0.01,
-  p_asymp_child = 0.8,
-  attack = 0.01,
-  child_trans = 1,
-  child_susp = 0.5,
-  child_vax = 0,
-  p_subclin_adult = 0,
-  p_subclin_child = 0,
-  teacher_trans = 1,
-  teacher_susp = 1,
-  disperse_transmission = T,
-  n_staff_contact = 0,
-  n_HH = 0,
-  num_adults = 2,
-  family_susp = 1,
-  n_start = 1,
-  time_seed_inf = NA,
-  days_inf = 6,
-  mult_asymp = 1,
-  seed_asymp = F,
-  isolate = T,
-  dedens = 0,
-  run_specials_now = F,
-  time = 30,
-  notify = F,
-  test = F,
-  test_sens = 0.7,
-  test_frac = 0.9,
-  test_days = "week",
-  test_type = "all",
-  quarantine.length = 10,
-  quarantine.grace = 3,
-  type = "base",
-  total_days = 5,
-  includeFamily = T,
-  synthpop = synthpop,
-  class = NA,
-  n_class = 4,
-  high_school = F,
-  nper = 8,
-  start_mult = 1,
-  start_type = "mix",
   bubble = F,
-  include_weekends = T,
-  turnaround.time = 1,
-  test_start_day = 1,
-  test_quarantine = F,
-  vax_eff = 0.9,
-  surveillance = F,
   version = 2
 )
 }
@@ -75,13 +80,13 @@ mult_runs(
 
 \item{n_contacts}{Number of sustained contacts outside of the classroom; defaults to 10}
 
-\item{n_contacts_brief}{Number of brief contacts outside of the classroom; defaults to 20}
-
 \item{rel_trans_HH}{Relative attack rate of household contact (vs. classrom); defaults to 1}
 
 \item{rel_trans}{Relative attack rate of sustained contact (vs. classroom); defaults to 1/8}
 
-\item{rel_trans_brief}{Relative attack rate of brief contact (vs. classroom); defaults to 1/50}
+\item{rel_trans_CC}{relative transmission in childcare vs. classroom; defaults to 2}
+
+\item{rel_trans_adult}{relative transmission in staff-staff interactions vs. classroom; defaults to 2}
 
 \item{p_asymp_adult}{Fraction of adults with asymptomatic (unsuspected) disease; defaults to 0.2}
 
@@ -103,9 +108,7 @@ mult_runs(
 
 \item{p_subclin_child}{Fraction of children with subclinical but not techincally asymptomatic disease; defaults to 0}
 
-\item{teacher_trans}{Factor by which teacher transmissibility is reduced due to intervention; defaults to 1}
-
-\item{teacher_susp}{Factor by which teacher transmissibility is reduced due to intervention; defaults to 1}
+\item{teacher_susp}{Teacher vaccination rate; defaults to 0.8}
 
 \item{disperse_transmission}{Whether transmission is overdispersed (vs. all have equal attack rate); default to T}
 
@@ -115,7 +118,7 @@ mult_runs(
 
 \item{num_adults}{number of adults interacting with children, defaults to 2}
 
-\item{family_susp}{Factor by which adult transmissibility is reduced due to intervention; defaults to 1}
+\item{family_susp}{Household member vaccination rate; defaults to 0.7}
 
 \item{n_start}{number of infections to seed model; defaults to 1}
 
@@ -123,13 +126,17 @@ mult_runs(
 
 \item{days_inf}{length of infectious period (assuming mild case or quarantined on symptoms)}
 
-\item{mult_asymp}{multiplier on asymptomatic infection; default is 1}
+\item{mult_asymp}{multiplier on asymptomatic infection for adults; default is 1}
+
+\item{mult_asymp_child}{multiplier on asymptomatic infection for children; default is 1}
 
 \item{seed_asymp}{whether to seed with an asymptomatic case}
 
 \item{isolate}{Whether symptomatic individuals isolate when symptoms emerge; defaults to T}
 
 \item{dedens}{Whether dedensification measures reduce attack rate; defaults to F}
+
+\item{run_specials_now}{Whether special subjects are run; defaults to F}
 
 \item{time}{length of time to run model; defaults to 30}
 
@@ -141,7 +148,7 @@ mult_runs(
 
 \item{test_frac}{fraction of school tested; defaults to 0.9}
 
-\item{test_days}{vector indicating days on which students are tested; defaults to Sundays}
+\item{test_days}{test frequency; "day", "week", "2x_week"; defaults to "week"}
 
 \item{test_type}{group tested; defaults to "all", also allows "staff" and "students"}
 
@@ -149,13 +156,17 @@ mult_runs(
 
 \item{quarantine.grace}{length of grace period after which a quarantined class returns not to be "re-quarantined"}
 
-\item{type}{"base", "On/off", "A/B", "Remote"; defaults to "base"}
+\item{type}{schedule; "base", "On/off", "A/B", "Remote"; defaults to "base"}
 
 \item{total_days}{number of days in school; defaults to 5}
 
 \item{includeFamily}{whether to include family, default = FALSE}
 
-\item{synthpop}{synthetic population; defaults to synthMaryland}
+\item{synthpop}{synthetic population; defaults to synthpop based on Maryland elementary school}
+
+\item{class}{make_school object; defaults to NA and will call for each simulation}
+
+\item{n_class}{number of classes per grade}
 
 \item{high_school}{whether to use a high school schedule of random period mixing; defaults to F}
 
@@ -163,9 +174,11 @@ mult_runs(
 
 \item{start_mult}{value to indicate relative frequency of adult/child infections; defaults to 1 (adults 2x as likely as kids)}
 
-\item{bubble}{whether out-of-school interactions occur with a 'bubble'; defaults to F}
+\item{start_type}{type of seed; default is "mix" (also "adult", "child")}
 
-\item{turnaround.time}{test turnaround time, default = 1 day}
+\item{include_weekends}{if TRUE excludes weekends from additional out-of-school mixing, defaults to F}
+
+\item{turnaround.time}{test turnaround time, default = 3 days}
 
 \item{test_start_day}{day tests are implemented for weekly testing; defaults to 1 = Monday}
 
@@ -175,11 +188,23 @@ mult_runs(
 
 \item{surveillance}{whether surveillance is underway; defaults to F}
 
+\item{rapid_test_sens}{sensitivity of rapid tests, defaults to 80\%}
+
+\item{overdisp_off}{all overdispersion off; defaults to F}
+
+\item{no_test_vacc}{Indicates whether vaccinated individuals are excluded from TTS & screening; defaults to F}
+
+\item{rel_trans_HH_symp_child}{Additional relative attack rate of a symptomatic infected child in the household; defaults to 1}
+
+\item{teacher_trans}{Factor by which teacher transmissibility is reduced due to intervention; defaults to 1}
+
+\item{n_contacts_brief}{Number of brief contacts outside of the classroom; defaults to 20}
+
+\item{rel_trans_brief}{Relative attack rate of brief contact (vs. classroom); defaults to 1/50}
+
+\item{bubble}{whether out-of-school interactions occur with a 'bubble'; defaults to F}
+
 \item{version}{v1 quarantines full cohort in A/B; v2 only sub-cohort; defaults to 2}
-
-\item{run_specials}{Whether special subjects are run; defaults to F}
-
-\item{@start_type}{type of seed; default is "mix" (also "adult", "child")}
 }
 \description{
 Run model multiple times and summarize results

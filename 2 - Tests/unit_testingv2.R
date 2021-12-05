@@ -1283,7 +1283,7 @@ run_parallel(df_SENS1[1,], synthpop, class = class)
 
 #*************************** ADDITIONAL TESTS *********************************#
 
-mean(out$start_kids) 
+mean(out$start_kids)
 child_prob*45
 
 

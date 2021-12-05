@@ -23,6 +23,6 @@ data(synthMaryland_HS)
 \description{
 A data frame containing a synthetic population of children
 ages 14-17, representative of the state of Maryland.
-This is used by make_class() to sort children into classes.
+This is used by make_school() to sort children into classes.
 }
 \keyword{datasets}

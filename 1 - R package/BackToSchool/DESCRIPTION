@@ -1,12 +1,11 @@
 Package: BackToSchool
-Title: What the Package Does (One Line, Title Case)
+Title: Create and run school agent-based model
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Alyssa",
+           family = "Bilinski",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           email = "alyssa_bilinski@brown.edu")
 Description: What the package does (one paragraph).
 License: `use_mit_license()`, `use_gpl3_license()` or friends to
     pick a license
