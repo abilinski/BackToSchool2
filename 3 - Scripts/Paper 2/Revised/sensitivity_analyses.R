@@ -2,8 +2,6 @@
 
 # source files
 source("functions.R")
-setwd("/users/abilinsk/data/abilinsk/Schools")
-source("abm.R")
 
 # local
 wd = paste0("/users/abilinsk/data/abilinsk/Schools/", level, "_1_Dec_Sens_", version)

@@ -2,13 +2,10 @@
 
 # source files
 source("functions.R")
-source("abm6.R")
 
 # local
 wd = paste0("/users/abilinsk/data/abilinsk/Schools/", level, "_1_Dec_", version)
 setwd(wd)
-
-setwd("/users/alyssabilinski/Desktop/Test/")
 
 # 5-day
 df_ELEM = make_df(scenario = c("Base case"),
@@ -85,5 +82,5 @@ class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults
 
 # run code
 tic()
-g = run_parallel(df_ELEM[1,] %>% mutate(test_quarantine = F, adult_prob = 300/100000, child_prob = 300/100000), synthpop, class = class)
+g = run_parallel(df_ELEM, synthpop, class = class)
 toc()
