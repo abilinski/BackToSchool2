@@ -523,7 +523,7 @@ run_care = function(a, df, care_contacts, rel_trans_CC = 2, num_adults = 2){
   if(!df$adult[df$id==a] | a %in% keep){
     
     # determine whether a contact becomes infected
-    prob_rand = rbinom(nrow(contacts), size = 1 + 0,
+    prob_rand = rbinom(nrow(contacts), size = 1,
                        prob = df$class_trans_prob[df$id==a]*contacts$susp*round(contacts$not_inf)*rel_trans_CC)
     
     # infected individuals
@@ -896,7 +896,7 @@ run_model = function(time = 30,
   #print(paste("start notification:", df$t_notify[df$start]))
   # run over time steps
   for(t in time_seed_inf:(time_seed_inf+time-1)){
-    print(paste("Time:", t, sched$day[sched$t==t][1], sched$group_two[sched$t==t][1]))
+    #print(paste("Time:", t, sched$day[sched$t==t][1], sched$group_two[sched$t==t][1]))
     
     # class quarantines
     classes_out = class_quarantine[class_quarantine$t_notify > -1 & class_quarantine$t_notify <= t & t <= (class_quarantine$t_notify + quarantine.length-1),]
@@ -1167,8 +1167,8 @@ run_model = function(time = 30,
       df$start[df$now] = 0      # remove seed if infected earlier
       df$t_exposed[df$now] = t
       df[df$now,] = make_infected(df[df$now,], days_inf = days_inf, mult_asymp = mult_asymp, mult_asymp_child = mult_asymp_child, turnaround.time = turnaround.time, overdisp_off = overdisp_off)
-      print(paste0("New exposures:"))
-      print(table(df$location[df$now]))
+      #print(paste0("New exposures:"))
+      #print(table(df$location[df$now]))
       #print(df %>% filter(now) %>% arrange(source) %>% select(id, HH_id, class, group, adult, family, source, location, symp))
     }
     
