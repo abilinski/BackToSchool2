@@ -11,6 +11,7 @@ library(foreach)
 library(doMC) 
 library(BackToSchool)
 
+options(warn = 1)
 ####************************** FUNCTIONS TO INPUT ARGUMENTS **************************####
 
 ## pull data

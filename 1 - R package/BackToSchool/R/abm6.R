@@ -367,7 +367,9 @@ run_household = function(a, df){
     HH_vec = df[df$HH_id==df$HH_id[df$id==a] & df$id!=a,]
     
     # determine whether a HH member becomes infected
-    prob_HH = rbinom(nrow(HH_vec), size = 1, prob = df$class_trans_prob[df$id==a]*df$relative_trans_HH[df$id==a]*HH_vec$susp*HH_vec$not_inf)
+    prob_HH = rbinom(nrow(HH_vec), size = 1, prob = ifelse(df$class_trans_prob[df$id==a]*df$relative_trans_HH[df$id==a]*HH_vec$susp*HH_vec$not_inf < 1,
+                                                           df$class_trans_prob[df$id==a]*df$relative_trans_HH[df$id==a]*HH_vec$susp*HH_vec$not_inf,
+                                                           1))
     HH = HH_vec$id
     
     # list infected individuals
@@ -400,7 +402,9 @@ run_class = function(a, df, high_school = F, hs.classes = NA){
     class_vec = df[df$class==df$class[df$id==a] & df$id!=a,]
     
     # determine whether a class member becomes infected
-    prob_class = rbinom(nrow(class_vec), size = 1, prob = df$class_trans_prob[df$id==a]*class_vec$susp*class_vec$present_susp)
+    prob_class = rbinom(nrow(class_vec), size = 1, prob = ifelse(df$class_trans_prob[df$id==a]*class_vec$susp*class_vec$present_susp < 1,
+                                                                 df$class_trans_prob[df$id==a]*class_vec$susp*class_vec$present_susp,
+                                                                 1))
     class = class_vec$id
     
     # list infected individuals
@@ -419,7 +423,9 @@ run_class = function(a, df, high_school = F, hs.classes = NA){
     #class_vec$count = sapply(class_vec$id, function(a) 1)
     
     # determine whether a class member becomes infected
-    prob_class = rbinom(nrow(class_vec), size = 1, prob = df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*class_vec$susp*class_vec$present_susp*class_vec$count)
+    prob_class = rbinom(nrow(class_vec), size = 1, prob = ifelse(df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*class_vec$susp*class_vec$present_susp*class_vec$count < 1,
+                                                                 df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*class_vec$susp*class_vec$present_susp*class_vec$count,
+                                                                 1))
     class = class_vec$id
     
     # list infected individuals
@@ -454,7 +460,9 @@ run_rand = function(a, df, random_contacts){
   
   # determine whether a contact becomes infected
   prob_rand = rbinom(nrow(contacts), size = 1,
-                     prob = df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*contacts$susp*contacts$present_susp)
+                     prob = ifelse(df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*contacts$susp*contacts$present_susp < 1,
+                                   df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*contacts$susp*contacts$present_susp,
+                                   1))
   
   # infected individuals
   infs = contacts$id*prob_rand
@@ -486,7 +494,10 @@ run_staff_rand = function(a, df, n_contact, rel_trans_adult = 2){
     
     # determine whether a contact becomes infected
     prob_rand = rbinom(nrow(contacts), size = 1,
-                       prob = df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*contacts$susp*contacts$present_susp*rel_trans_adult)
+                       prob = ifelse(df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*contacts$susp*contacts$present_susp*rel_trans_adult < 1,
+                                     df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*contacts$susp*contacts$present_susp*rel_trans_adult,
+                                     1))
+    
     # infected individuals
     infs = contacts$id*prob_rand
     
@@ -524,7 +535,9 @@ run_care = function(a, df, care_contacts, rel_trans_CC = 2, num_adults = 2){
     
     # determine whether a contact becomes infected
     prob_rand = rbinom(nrow(contacts), size = 1,
-                       prob = df$class_trans_prob[df$id==a]*contacts$susp*round(contacts$not_inf)*rel_trans_CC)
+                       prob = ifelse(df$class_trans_prob[df$id==a]*contacts$susp*round(contacts$not_inf)*rel_trans_CC < 1,
+                                     df$class_trans_prob[df$id==a]*contacts$susp*round(contacts$not_inf)*rel_trans_CC,
+                                     1))
     
     # infected individuals
     infs = contacts$id*prob_rand
@@ -594,7 +607,7 @@ make_quarantine = function(class_quarantine, df.u, quarantine.length = 10, quara
 # note to self -- add additional parameters to change around here
 make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, mult_asymp_child = 1, seed_asymp = F, turnaround.time = 1, overdisp_off = F){
   
-  if(is.na(set)){
+  if(is.na(set)[1]){
     #  set infectivity  parameters
     df.u$symp = rbinom(nrow(df.u), size = 1, prob = 1-df.u$p_asymp)
     df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 1)
@@ -613,7 +626,8 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, mult_asymp_ch
     }
     df.u$t_inf = set + runif(nrow(df.u), min = -0.5, max = 0.5)
     df.u$t_symp = df.u$t_inf + rnorm(nrow(df.u), mean = 2, sd = .4)
-    df.u$t_exposed = df.u$t_symp - rgamma(nrow(df.u), shape = 5.8, scale=.95)
+    symp_gap <- rgamma(nrow(df.u), shape = 5.8, scale=.95)
+    df.u$t_exposed = ifelse(df.u$t_symp - symp_gap < df.u$t_inf - 1, df.u$t_symp - symp_gap, df.u$t_inf - 1)
   }
   
   # add overdispersion
@@ -654,7 +668,9 @@ run_specials = function(a, df, specials){
     specials_vec = df[df$id%in%specials$teacher[specials$class==df$class[df$id==a]],]
     
     # determine whether teacher becomes infected
-    prob_specials = rbinom(nrow(specials_vec), size = 1, prob = df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*specials_vec$susp*specials_vec$present_susp)
+    prob_specials = rbinom(nrow(specials_vec), size = 1, prob = ifelse(df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*specials_vec$susp*specials_vec$present_susp < 1,
+                                                                       df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*specials_vec$susp*specials_vec$present_susp,
+                                                                       1))
     infs = specials_vec$id*prob_specials
     
   }else if(df$specials[df$id==a]){
@@ -662,7 +678,9 @@ run_specials = function(a, df, specials){
     
     # determine whether a class member becomes infected
     prob_specials = rbinom(nrow(specials_class_vec), size = 1,
-                           prob = df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*specials_class_vec$susp*specials_class_vec$present_susp)
+                           prob = ifelse(df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*specials_class_vec$susp*specials_class_vec$present_susp < 1,
+                                         df$class_trans_prob[df$id==a]*df$relative_trans[df$id==a]*specials_class_vec$susp*specials_class_vec$present_susp,
+                                         1))
     specials_vec = specials_class_vec$id
     infs = specials_vec*prob_specials
     
@@ -1296,7 +1314,7 @@ mult_runs = function(N, n_other_adults, n_contacts, rel_trans_HH,
   for(i in 1:N){
     
     ## make class
-    if(is.na(class)){
+    if(is.na(class)[1]){
       
       class = make_school(synthpop = synthpop, n_other_adults = n_other_adults, includeFamily = includeFamily, n_class = n_class)
       
