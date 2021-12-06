@@ -2,11 +2,9 @@
 
 # source files
 source("functions.R")
-setwd("/users/abilinsk/data/abilinsk/Schools")
-source("abm.R")
 
 # local
-wd = paste0("/users/abilinsk/data/abilinsk/Schools/", level, "_1_Dec_Sens_", version)
+wd = paste0("/users/abilinsk/data/abilinsk/Schools2/", level, "_1_Dec_Sens")
 setwd(wd)
 
 # fixed parameters
@@ -51,7 +49,7 @@ df_SENS6 = make_df(attack = sens.attack,
 df_SENS7 = make_df(attack = sens.attack, 
                    child_prob = sens.prob, 
                    adult_prob = sens.prob,
-                   vax_eff = c(.5, .7, .9), child_vax = s.vax.sens,
+                   vax_eff = c(.5, .7, .9),
                    child_vax = c(0, .3, .6, .9))
 
 # don't test unvaccinated

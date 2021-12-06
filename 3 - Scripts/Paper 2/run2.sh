@@ -12,4 +12,4 @@
 
 module load gcc/10.2 pcre2/10.35 intel/2020.2 texlive/2018 R/3.5.2
 
-R CMD BATCH --quiet --no-restore --no-save "--args test_q=$1 test_q_isolate=$2 vax_eff_val=$3 version=$4 level='$5'" base_case.R test.out
+R CMD BATCH --quiet --no-restore --no-save "--args test_q=$1 test_q_isolate=$2 vax_eff_val=$3 version=$4 level='$5'" sensitivity_analysis.R test2.out

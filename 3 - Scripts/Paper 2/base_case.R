@@ -2,13 +2,11 @@
 
 # source files
 source("functions.R")
-source("abm6.R")
 
 # local
-wd = paste0("/users/abilinsk/data/abilinsk/Schools/", level, "_1_Dec_", version)
+wd = paste0("/users/abilinsk/data/abilinsk/Schools2/", level, "_1_Dec_", version)
+print(wd)
 setwd(wd)
-
-setwd("/users/alyssabilinski/Desktop/Test/")
 
 # 5-day
 df_ELEM = make_df(scenario = c("Base case"),
@@ -16,13 +14,14 @@ df_ELEM = make_df(scenario = c("Base case"),
                   test_frac = c(.7, .9),
                   child_vax = c(s.child_vax, s.child_vax.vary),
                   test_quarantine = test_q)
+
 # Surveillance
 df_ELEM_SURV = make_df(scenario = c("Base case"), 
                        test_frac = c(0.1, 0.2, .9),
                        attack = c(0.02, 0.04),
                        child_vax = c(s.child_vax, s.child_vax.vary),
                        surveillance = T,
-		                   test_quarantine = test_q) %>%
+		       		                       test_quarantine = test_q) %>%
   filter(!(test_frac==0.9 & attack!=0.04))
 df_ELEM_SURV2 = df_ELEM_SURV %>% mutate(test = F) %>% filter(attack==0.04 & test_frac==0.9)
 
@@ -83,7 +82,9 @@ set.seed(3232)
 class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
                     includeFamily = T, n_class = df_ELEM$n_class[1])
 
+
+print(detectCores())
 # run code
 tic()
-g = run_parallel(df_ELEM[1,] %>% mutate(test_quarantine = F, adult_prob = 300/100000, child_prob = 300/100000), synthpop, class = class)
+g = run_parallel(df_ELEM, synthpop, class = class)
 toc()

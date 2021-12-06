@@ -601,7 +601,7 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, mult_asymp_ch
     df.u$t_symp = df.u$t_exposed + rgamma(nrow(df.u), shape = 5.8, scale=.95)
     val = rnorm(nrow(df.u), mean = 2, sd = .4)
     df.u$t_inf = ifelse(df.u$t_symp - val > df.u$t_exposed + 1, df.u$t_symp - val, 
-                        df.u$t_exposed + 1 + runif(nrow(df.u), min = -0.5, max = 0.5))
+                        df.u$t_exposed + 1)
   } else{
     #  set infectivity  parameters
     if(seed_asymp) {

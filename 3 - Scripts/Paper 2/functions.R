@@ -11,9 +11,33 @@ library(foreach)
 library(doMC) 
 library(BackToSchool)
 
+####************************** FUNCTIONS TO INPUT ARGUMENTS **************************####
+
+## pull data
+## Pull command arguments
+args=(commandArgs(TRUE))
+# args is now a list of character vectors
+# First check to see if arguments are passed.
+# Then cycle through each element of the list and evaluate the expressions.
+if (length (args) == 0) {
+  print("No arguments supplied.")
+
+} else {
+  for (i in 1:length(args)) {
+    eval (parse (text = args[[i]] ))
+  }
+
+  test_q = as.logical(test_q)
+  test_q_isolate = as.logical(test_q_isolate)
+  vax_eff_val = as.numeric(vax_eff_val)
+  version = as.character(version)
+  level = as.character(level)
+  commandArgs <- function(...) c(test_q, notify_val, test_q_isolate, version)
+}
+
 #***************************** SET UP PARAMTERS *****************************#
 # baseline simulation parameters
-s.n_tot = 1
+s.n_tot = 1000
 s.attack = c(.02)
 s.disperse_transmission = F
 s.start_type = c("cont") 
@@ -123,7 +147,13 @@ make_df = function(disperse = T, # how to distribute runs
     # don't vary testing params if you're not testing
     filter((test_days=="week" & test_sens == .9 & test_frac == .9 & test_type == "all") | test) %>%
     # don't vary notifications and testing if remote
-    filter(type!="Remote" | (!notify & !test))
+    filter(type!="Remote" | (!notify & !test)) %>%
+    # set child and adult incidence equal
+    filter(child_prob==adult_prob) %>%
+    # adjust incidence for vaccination
+    mutate(prob_orig = child_prob,
+	   child_prob=child_prob/(1-child_vax*vax_eff),
+           adult_prob=adult_prob/(1-family_susp*vax_eff))
   
   # repeat according to simulation count
   if(disperse) df <- df[rep(row.names(df), n_tot),] %>% mutate(i = row_number())
@@ -136,7 +166,7 @@ make_df = function(disperse = T, # how to distribute runs
 #### RUN SINGLE ITERATION ####
 sims = function(df, i, synthpop, class = NA){
   #set.seed(i)
-  out = mult_runs(version = 2, N = df$n_tot[i], n_contacts = df$n_contacts[i], n_staff_contact = df$n_staff_contact[i], 
+  out = mult_runs(version = 2, N = 1, n_contacts = df$n_contacts[i], n_staff_contact = df$n_staff_contact[i], 
                   run_specials_now = df$run_specials_now[i], start_mult = df$start_mult[i], high_school = df$high_school[i],
                   attack = df$attack[i], child_susp = df$child_susp[i], time = df$time[i], synthpop = synthpop,
                   rel_trans = df$rel_trans[i], n_other_adults = df$n_other_adults[i], n_class = df$n_class[i],
@@ -162,8 +192,8 @@ sims = function(df, i, synthpop, class = NA){
   out = out %>% bind_cols(df[i,])
   save(out, file = paste0("results", i, "_", Sys.time(), ".RData"))
   print(i)
-  #rm(out); gc()
-  return(out)
+  rm(out); gc()
+  #return(out)
 }
 
 #### RUN IN PARALLEL ####
@@ -176,8 +206,7 @@ run_parallel = function(df, synthpop, class = NA){
 
   
   foreach(i=1:nrow(df), .errorhandling = "pass") %dopar% {
-    each_filename <- paste("RESULT_", "_", i, ".RData", sep = "")
-    out <- tryCatch(
+      out <- tryCatch(
       withCallingHandlers(sims(df, i, synthpop, class = class),
                           error = function(e){
                             stack <- sys.calls()
@@ -193,28 +222,3 @@ run_parallel = function(df, synthpop, class = NA){
   }
   
 }
-
-####************************** FUNCTIONS TO INPUT ARGUMENTS **************************#### 
-
-## pull data
-## Pull command arguments
-args=(commandArgs(TRUE))
-# args is now a list of character vectors
-# First check to see if arguments are passed.
-# Then cycle through each element of the list and evaluate the expressions.
-if (length (args) == 0) {
-  print("No arguments supplied.")
-  
-} else {
-  for (i in 1:length(args)) {
-    eval (parse (text = args[[i]] ))
-  }
-  
-  test_q = as.logical(test_q)
-  test_q_isolate = as.logical(test_q_isolate)
-  vax_eff_val = as.numeric(vax_eff_val)
-  version = as.character(version)
-  level = as.character(level)
-  commandArgs <- function(...) c(test_q, notify_val, test_q_isolate, version)
-}
-
