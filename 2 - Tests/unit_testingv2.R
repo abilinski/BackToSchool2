@@ -1062,7 +1062,7 @@ test_make_infected1 = function(quarantine.length = 14, quarantine.grace = 3, npe
     v3[i] = sum(out$sub_clin)
     v4[i] = mean(floor(out$t_end_inf[out$t_inf!=-1])-ceiling(out$t_inf[out$t_inf!=-1]) + 1) 
     v5[i] = mean(floor(out$t_end_inf_home[out$t_inf!=-1])-ceiling(out$t_inf[out$t_inf!=-1]) + 1) 
-    v6[i] = mean(ceiling(out$t_notify[out$t_inf!=-1])-ceiling(out$t_inf[out$t_inf!=-1]) + 1)
+    v6[i] = mean(floor(out$t_notify[out$t_inf!=-1])-ceiling(out$t_inf[out$t_inf!=-1]) + 1)
     v7[i] = mean(out$class_trans_prob)
     v8[i] = mean(out$relative_trans_HH)
     v9[i] = mean(out$t_inf!=-1)
@@ -1136,7 +1136,7 @@ test_make_infected2 = function(quarantine.length = 14, quarantine.grace = 3, npe
                                n_other_adults = 30, child_susp = 1, child_trans = 1, teacher_susp = 0, family_susp = 0, mult_asymp = 1, child_vax = 0,
                                seed_asymp = F, p_asymp_child = 0, p_subclin_child = 0, p_asymp_adult = 0, p_subclin_adult = 0, isolate = F,
                                n_start = 1, high_school = F, time = 30, time_seed_inf = 1, n_contact = 10, n_staff_contact = 10, n_HH = 1,
-                               type = "A/B", total_days = 2, num_adults = 2, notify = F, init = 1, days_inf = 5, set = NA, turnaround.time = 1,
+                               type = "base", total_days = 2, num_adults = 2, notify = F, init = 1, days_inf = 5, set = NA, turnaround.time = 1,
                                overdisp_off = T, rel_trans_HH_symp_child = 2, mult_asymp_child = 1){
   
   g = make_school(n_other_adults = n_other_adults, synthpop = synthpop_val,
@@ -1176,16 +1176,20 @@ test_make_infected2 = function(quarantine.length = 14, quarantine.grace = 3, npe
                     notify = notify, type = type)
     
     # starting individuals
-    v1[i] = mean(out$inf_days[out$t_inf!=-1])
-    v2[i] = mean(out$inf_home_days[out$t_inf!=-1])
-    v3[i] = mean(out$symp_days[out$t_inf!=-1])
-    v4[i] = mean(out$symp_and_inf_days[out$t_inf!=-1])
-    v5[i] = mean(out$last[out$t_inf!=-1 & out$symp & !out$sub_clin]-out$t_notify[out$t_inf!=-1 & out$symp & !out$sub_clin])
+    
+    if(sum(out$t_inf!=-1 & !out$start)>0){
+      v1[i] = mean(out$inf_days[out$t_inf!=-1 & out$t_inf<=25 & !out$start])
+      v2[i] = mean(out$inf_home_days[out$t_inf!=-1 & out$t_inf<=25 & !out$start])
+      v3[i] = mean(out$symp_days[out$t_inf!=-1 & out$t_inf<=25 & !out$start])
+      v4[i] = mean(out$symp_and_inf_days[out$t_inf!=-1 & out$t_inf<=25 & !out$start])
+      v5[i] = mean(out$last[out$t_inf!=-1 & out$symp & !out$sub_clin & out$t_inf<=25 & !out$start]-
+                     out$t_notify[out$t_inf!=-1 & out$symp & !out$sub_clin & out$t_inf<=25 & !out$start])
+    }else{v1[i]=v2[i]=v3[i]=v4[i]=v5[i]}
     #floor(out$t_end_inf[out$t_exposed>=0])
   }
   
-  return(data.frame(mean(v1), mean(v2),
-                    mean(v3), mean(v4), mean(v5)))
+  return(data.frame(mean(v1, na.rm = T), mean(v2, na.rm = T),
+                    mean(v3, na.rm = T), mean(v4, na.rm = T), mean(v5, na.rm = T)))
 }
 
 # children
@@ -1193,16 +1197,30 @@ run = expand_grid(notify = c(T,F), isolate = c(T,F),
                   p_asymp_child = c(0,1), p_subclin_child = c(0,1), mult_asymp_child = c(.5, 1),
                   rel_trans_HH_symp_child = c(2,5))
 
-g = t(sapply(1:nrow(run), function(a) test_make_infected2(isolate = T, attack = 0, 
+g = t(sapply(1, function(a) test_make_infected2(isolate = T, attack = .1,
                                                           notify = run$notify[a], 
                                                           p_asymp_child = run$p_asymp_child[a],
                                                           p_subclin_child = run$p_subclin_child[a],
                                                           p_asymp_adult = 0, p_subclin_adult = 0,
                                                           mult_asymp_child = run$mult_asymp_child[a],
                                                           rel_trans_HH_symp_child = run$rel_trans_HH_symp_child[a],
-                                                          trials = 1)))
+                                                          trials = 100)))
 
 
+run = expand_grid(notify = c(T,F), isolate = c(T,F), 
+                  p_asymp_adult = c(0,1), p_subclin_adult = c(0,1), mult_asymp = c(.5, 1),
+                  rel_trans_HH_symp_child = c(1,2))
+
+g2 = t(sapply(1:nrow(run), function(a) test_make_infected2(isolate = run$isolate[a], 
+                                                           notify = run$notify[a], 
+                                                           p_asymp_adult = run$p_asymp_adult[a],
+                                                           p_subclin_adult = run$p_subclin_adult[a],
+                                                           mult_asymp = run$mult_asymp[a],
+                                                           mult_asymp_child = 7,
+                                                           rel_trans_HH_symp_child = run$rel_trans_HH_symp_child[a],
+                                                           trials = 100, init = 700, overdisp_off = T)))
+
+View(bind_rows(run, g))
 #*************************** TEST MAKE_HS_CLASSES *************************************#
 
 #### HIGH SCHOOL SCHEDULING ####

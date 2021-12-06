@@ -11,6 +11,30 @@ library(foreach)
 library(doMC) 
 library(BackToSchool)
 
+####************************** FUNCTIONS TO INPUT ARGUMENTS **************************#### 
+
+## pull data
+## Pull command arguments
+args=(commandArgs(TRUE))
+# args is now a list of character vectors
+# First check to see if arguments are passed.
+# Then cycle through each element of the list and evaluate the expressions.
+if (length (args) == 0) {
+  print("No arguments supplied.")
+  
+} else {
+  for (i in 1:length(args)) {
+    eval (parse (text = args[[i]] ))
+  }
+  
+  test_q = as.logical(test_q)
+  test_q_isolate = as.logical(test_q_isolate)
+  vax_eff_val = as.numeric(vax_eff_val)
+  version = as.character(version)
+  level = as.character(level)
+  commandArgs <- function(...) c(test_q, notify_val, test_q_isolate, version)
+}
+
 #***************************** SET UP PARAMTERS *****************************#
 # baseline simulation parameters
 s.n_tot = 1
@@ -123,7 +147,10 @@ make_df = function(disperse = T, # how to distribute runs
     # don't vary testing params if you're not testing
     filter((test_days=="week" & test_sens == .9 & test_frac == .9 & test_type == "all") | test) %>%
     # don't vary notifications and testing if remote
-    filter(type!="Remote" | (!notify & !test))
+    filter(type!="Remote" | (!notify & !test)) %>%
+    # adjust incidence for vaccination
+    mutate(child_prob=child_prob/(1-child_vax*vax_eff),
+           adult_prob=adult_prob/(1-family_susp*vax_eff))
   
   # repeat according to simulation count
   if(disperse) df <- df[rep(row.names(df), n_tot),] %>% mutate(i = row_number())
@@ -175,13 +202,13 @@ run_parallel = function(df, synthpop, class = NA){
   foreach::getDoParWorkers()
 
   
-  foreach(i=1:nrow(df), .errorhandling = "pass") %dopar% {
+  foreach(i=1:nrow(df), .errorhandling = "pass", .combine = rbind) %dopar% {
     each_filename <- paste("RESULT_", "_", i, ".RData", sep = "")
     out <- tryCatch(
       withCallingHandlers(sims(df, i, synthpop, class = class),
                           error = function(e){
                             stack <- sys.calls()
-                            save(stack, file = paste("./Errors", paste("error", i, sep = "_"), ".RData", sep = ""))
+                            save(stack, file = paste("./Desktop/Test/Errors/", paste("error", i, sep = "_"), ".RData", sep = ""))
                             
                             return(NULL)}),
       error = function(c){
@@ -194,27 +221,4 @@ run_parallel = function(df, synthpop, class = NA){
   
 }
 
-####************************** FUNCTIONS TO INPUT ARGUMENTS **************************#### 
-
-## pull data
-## Pull command arguments
-args=(commandArgs(TRUE))
-# args is now a list of character vectors
-# First check to see if arguments are passed.
-# Then cycle through each element of the list and evaluate the expressions.
-if (length (args) == 0) {
-  print("No arguments supplied.")
-  
-} else {
-  for (i in 1:length(args)) {
-    eval (parse (text = args[[i]] ))
-  }
-  
-  test_q = as.logical(test_q)
-  test_q_isolate = as.logical(test_q_isolate)
-  vax_eff_val = as.numeric(vax_eff_val)
-  version = as.character(version)
-  level = as.character(level)
-  commandArgs <- function(...) c(test_q, notify_val, test_q_isolate, version)
-}
 

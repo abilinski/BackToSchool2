@@ -13,6 +13,7 @@ wd = "~/Dropbox/Schools/BackToSchool2/1 - R Package/"
 # to update documentation
 setwd(paste0(wd, "BackToSchool"))
 document()
+build(manual = T)
 devtools::build_manual()
 
 # to load

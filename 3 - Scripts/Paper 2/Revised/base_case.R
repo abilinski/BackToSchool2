@@ -7,6 +7,12 @@ source("functions.R")
 wd = paste0("/users/abilinsk/data/abilinsk/Schools/", level, "_1_Dec_", version)
 setwd(wd)
 
+test_q = F
+test_q_isolate = T
+vax_eff_val = .8
+version = 0
+level = "Elementary"
+
 # 5-day
 df_ELEM = make_df(scenario = c("Base case"),
                   test_days = c("week", "2x_week"), 
@@ -80,7 +86,30 @@ set.seed(3232)
 class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults[1], 
                     includeFamily = T, n_class = df_ELEM$n_class[1])
 
+s.child_prob = .00300
+s.adult_prob = .00300
+df_ELEM_RUN = df_ELEM[1:100,] %>% mutate(no_test_vacc = T, adult_prob = s.adult_prob, child_prob = s.child_prob, child_vax = .3)
 # run code
 tic()
-g = run_parallel(df_ELEM, synthpop, class = class)
+g = run_parallel(df_ELEM_RUN, synthpop, class = class)
 toc()
+
+# check times
+mean(g$start_adult_time)
+mean(g$start_kids_time)
+1+45/2
+
+# check initialized numbers
+mean(g$seed_adults)
+mean(g$seed_kids)
+adult_prob*45*sum(1-.1*class$adult*(!class$family) + .3*class$family)
+child_prob*45*sum(!class$adult)*(1-.3*.8)
+
+mean(g$vaxxed)
+sum(.7*class$family + .9*(!class$family)*(class$adult) + .3*(!class$adult))
+
+mean(g$test_type...117)
+sum(!class$family)
+mean(g$inc_test)
+mean(g$not_inf_start)
+nrow(class)

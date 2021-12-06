@@ -600,7 +600,8 @@ make_infected = function(df.u, days_inf, set = NA, mult_asymp = 1, mult_asymp_ch
     df.u$sub_clin = ifelse(df.u$symp, rbinom(nrow(df.u), size = 1, prob =  df.u$p_subclin/(1-df.u$p_asymp)), 1)
     df.u$t_symp = df.u$t_exposed + rgamma(nrow(df.u), shape = 5.8, scale=.95)
     val = rnorm(nrow(df.u), mean = 2, sd = .4)
-    df.u$t_inf = ifelse(df.u$t_symp - val > df.u$t_exposed + 1, df.u$t_symp - val, df.u$t_exposed + 1)
+    df.u$t_inf = ifelse(df.u$t_symp - val > df.u$t_exposed + 1, df.u$t_symp - val, 
+                        df.u$t_exposed + 1 + runif(nrow(df.u), min = -0.5, max = 0.5))
   } else{
     #  set infectivity  parameters
     if(seed_asymp) {
@@ -887,11 +888,11 @@ run_model = function(time = 30,
   class_test_ind_q = 0
   test_frac_orig = test_frac
   df$uh.oh = 0
-  #df$inf_days = 0
-  #df$inf_home_days = 0
-  #df$symp_days = 0
-  #df$symp_and_inf_days = 0
-  #df$last = 0
+  df$inf_days = 0
+  df$inf_home_days = 0
+  df$symp_days = 0
+  df$symp_and_inf_days = 0
+  df$last = 0
   
   #print(paste("start notification:", df$t_notify[df$start]))
   # run over time steps
@@ -929,18 +930,18 @@ run_model = function(time = 30,
     df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf >= t
     
     # checks
-    #df$inf_days = df$inf_days + df$inf
-    #df$inf_home_days = df$inf_home_days + df$inf_home
-    #df$symp_days = df$symp_days + ifelse(df$symp_now==1 & !is.na(df$symp_now), 1, 0)
-    #df$symp_and_inf_days = df$symp_and_inf_days + df$symp_now*df$inf
-    #df$last = ifelse(df$inf, t, df$last)
+    df$inf_days = df$inf_days + df$inf
+    df$inf_home_days = df$inf_home_days + df$inf_home
+    df$symp_days = df$symp_days + ifelse(df$symp_now==1 & !is.na(df$symp_now), 1, 0)
+    df$symp_and_inf_days = df$symp_and_inf_days + df$symp_now*df$inf
+    df$last = ifelse(df$inf, t, df$last)
     
     if(high_school & nrow(classes_out)>0){
       df$nq = !unlist(lapply(classes.ind, function(a) sum(a %in% classes_out$class)>0))
       df$present =  sched$present[sched$t==t] & df$nq
     }
     df$not_inf = df$t_exposed==-99 | df$t_exposed>t # if exposed from community, can be exposed earlier
-    if(t==1) df$not_inf_keep = df$not_inf
+    if(t==15) df$not_inf_keep = df$not_inf
     df$present_susp = df$present & df$not_inf
     df$quarantined = df$quarantined + as.numeric(df$q_out & sched$present[sched$t==t])
     #print(sum(as.numeric(df$q_out)))
@@ -1456,8 +1457,8 @@ mult_runs = function(N, n_other_adults, n_contacts, rel_trans_HH,
     #keep$specials_count[i] = sum(df$specials_count[df$start])
     
     # Alyssa's new checks
-    keep$start_kids[i] = sum(df$start.init[!df$adult])
-    keep$start_adults[i] = sum(df$start.init[df$adult])
+    keep$seed_kids[i] = sum(df$start.init[!df$adult])
+    keep$seed_adults[i] = sum(df$start.init[df$adult])
     keep$start_kids_time[i] = mean(df$t_inf[df$start.init & !df$adult])
     keep$start_adult_time[i] = mean(df$t_inf[df$start.init & df$adult])
     keep$not_inf_start[i] = sum(df$not_inf_keep)
@@ -1465,8 +1466,8 @@ mult_runs = function(N, n_other_adults, n_contacts, rel_trans_HH,
     keep$inc_test[i] = sum(df$inc_test & df$vacc)
     keep$vaxxed[i] = sum(df$vacc)
     keep$test_q_start[i] = sum(df$test_q_keep)
+    #print(i) 
     
-        #print(i) 
   }
   
   #toc()
