@@ -1314,7 +1314,7 @@ mult_runs = function(N, n_other_adults, n_contacts, rel_trans_HH,
   for(i in 1:N){
     
     ## make class
-    if(is.na(class)[1]){
+    if(is.na(unlist(class))[1]){
       
       class = make_school(synthpop = synthpop, n_other_adults = n_other_adults, includeFamily = includeFamily, n_class = n_class)
       
