@@ -38,7 +38,7 @@ if (length (args) == 0) {
 
 #***************************** SET UP PARAMTERS *****************************#
 # baseline simulation parameters
-s.n_tot = 1000
+s.n_tot = 500
 s.attack = c(.02)
 s.disperse_transmission = F
 s.start_type = c("cont") 
@@ -193,8 +193,8 @@ sims = function(df, i, synthpop, class = NA){
   out = out %>% bind_cols(df[i,])
   save(out, file = paste0("results", i, "_", Sys.time(), ".RData"))
   print(i)
-  rm(out); gc()
-  #return(out)
+  #rm(out); gc()
+  return(out)
 }
 
 #### RUN IN PARALLEL ####
@@ -205,21 +205,22 @@ run_parallel = function(df, synthpop, class = NA){
   detectCores()
   foreach::getDoParWorkers()
 
+  foreach(i=1:nrow(df), .combine = "rbind") %dopar% {sims(df, i, synthpop, class = class)}
   
-  foreach(i=1:nrow(df), .errorhandling = "pass") %dopar% {
-      out <- tryCatch(
-      withCallingHandlers(sims(df, i, synthpop, class = class),
-                          error = function(e){
-                            stack <- sys.calls()
-                            save(stack, file = paste("./Errors", paste("error", i, sep = "_"), ".RData", sep = ""))
-                            
-                            return(NULL)}),
-      error = function(c){
-        message(paste("Error occurred in row", i))
-        message("Original error message:")
-        message(c)
-        return(NULL)
-      })
-  }
+  # foreach(i=1:nrow(df), .errorhandling = "pass") %dopar% {
+  #     out <- tryCatch(
+  #     withCallingHandlers(sims(df, i, synthpop, class = class),
+  #                         error = function(e){
+  #                           stack <- sys.calls()
+  #                           save(stack, file = paste("./Errors", paste("error", i, sep = "_"), ".RData", sep = ""))
+  #                           
+  #                           return(NULL)}),
+  #     error = function(c){
+  #       message(paste("Error occurred in row", i))
+  #       message("Original error message:")
+  #       message(c)
+  #       return(NULL)
+  #     })
+  # }
   
 }

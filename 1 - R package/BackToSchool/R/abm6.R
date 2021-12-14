@@ -921,7 +921,7 @@ run_model = function(time = 30,
     classes_out = class_quarantine[class_quarantine$t_notify > -1 & class_quarantine$t_notify <= t & t <= (class_quarantine$t_notify + quarantine.length-1),]
     df$present = sched$present[sched$t==t]
     df$inf = df$t_inf > -1 & df$t_inf <= t & df$t_end_inf >= t
-    df$symp_now = !df$family & !is.na(df$symp) & df$symp==1 & !df$sub_clin & df$t_inf <= t & df$t_end_inf >= t
+    df$symp_now = !df$family & !is.na(df$symp) & df$symp==1 & !df$sub_clin & df$t_symp <= t & df$t_end_inf >= t
     #print(paste("Time:", t, sched$day[sched$t==t][1]))
     #print(classes_out)
     df$flag = (paste(df$class, df$group))%in%classes_out$class_group | (df$class%in%classes_out$class & df$group==99)

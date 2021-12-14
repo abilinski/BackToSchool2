@@ -17,7 +17,7 @@ df_ELEM = make_df(scenario = c("Base case"),
 
 # Surveillance
 df_ELEM_SURV = make_df(scenario = c("Base case"), 
-                       test_frac = c(0.1, 0.2, .9),
+                       test_frac = ifelse(level=="Elementary", c(0.1, 0.2, .9), c(0.2, 0.4, .9)),
                        attack = c(0.02, 0.04),
                        child_vax = c(s.child_vax, s.child_vax.vary),
                        surveillance = T,

@@ -49,14 +49,13 @@ df_SENS6 = make_df(attack = sens.attack,
 df_SENS7 = make_df(attack = sens.attack, 
                    child_prob = sens.prob, 
                    adult_prob = sens.prob,
-                   vax_eff = c(.5, .7, .9),
                    child_vax = c(0, .3, .6, .9))
 
 # don't test unvaccinated
 df_SENS8 = make_df(attack = sens.attack, 
                    child_prob = sens.prob, 
                    adult_prob = sens.prob,
-                   no_test_vacc = c(T, F)) 
+                   no_test_vacc = c(T, F), child_vax = s.vax.sens) 
 
 # rapid test sensitivity
 df_SENS9 = make_df(attack = sens.attack, 
