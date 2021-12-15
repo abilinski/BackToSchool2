@@ -86,5 +86,5 @@ class = make_school(synthpop = synthpop, n_other_adults = df_ELEM$n_other_adults
 print(detectCores())
 # run code
 tic()
-g = run_parallel(df_ELEM, synthpop, class = class)
+g = run_parallel(df_ELEM[1,], synthpop, class = class)
 toc()
