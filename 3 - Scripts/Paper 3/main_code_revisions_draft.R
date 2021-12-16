@@ -174,10 +174,10 @@ for(outcome in c("inschool.outbreak_inc.1", "all.overall", "hosp")){
                 scale_fill_gradient(low = "blue", high = "yellow", limits = c(0, 1), breaks = c(0, 0.5, 1), labels = c(as.character(0), as.character(0.5), as.character(1)), name = "Transmission Probability") +
                 geom_contour(aes(z = outcome, color = factor(..level..)), breaks = c(0, 0.25, 0.5, 0.75), size = 1.25) +
                 scale_color_discrete(type = c("0.25" = "green", "0.5" = "orange", "0.75" = "purple")) +
-                geom_segment(aes(x = 0, xend = 50, y = mitigation_a.high, yend = mitigation_a.high, linetype = "A: Simple Ventilation and Hand Washing"), size = 1.25) +
-                geom_segment(aes(x = 0, xend = 50, y = mitigation_a.low, yend = mitigation_a.low, linetype = "A: Simple Ventilation and Hand Washing"), size = 1.25) +
-                geom_segment(aes(x = 0, xend = 0, y = mitigation_a.low, yend = mitigation_a.high, linetype = "A: Simple Ventilation and Hand Washing"), size = 1.25) +
-                geom_segment(aes(x = 50, xend = 50, y = mitigation_a.low, yend = mitigation_a.high, linetype = "A: Simple Ventilation and Hand Washing"), size = 1.25) +
+                geom_segment(aes(x = 0, xend = 50, y = mitigation_a.high, yend = mitigation_a.high, linetype = "A: Simple ventilation and hand washing"), size = 1.25) +
+                geom_segment(aes(x = 0, xend = 50, y = mitigation_a.low, yend = mitigation_a.low, linetype = "A: Simple ventilation and hand washing"), size = 1.25) +
+                geom_segment(aes(x = 0, xend = 0, y = mitigation_a.low, yend = mitigation_a.high, linetype = "A: Simple ventilation and hand washing"), size = 1.25) +
+                geom_segment(aes(x = 50, xend = 50, y = mitigation_a.low, yend = mitigation_a.high, linetype = "A: Simple ventilation and hand washing"), size = 1.25) +
                 geom_segment(aes(x = 0, xend = 50, y = mitigation_b.low, yend = mitigation_b.low, linetype = "B: A plus universal masking of students\nand educators/staff"), size = 1.25) +
                 geom_segment(aes(x = 0, xend = 50, y = mitigation_b.high, yend = mitigation_b.high, linetype = "B: A plus universal masking of students\nand educators/staff"), size = 1.25) +
                 geom_segment(aes(x = 0, xend = 0, y = mitigation_b.low, yend = mitigation_b.high, linetype = "B: A plus universal masking of students\nand educators/staff"), size = 1.25) +
