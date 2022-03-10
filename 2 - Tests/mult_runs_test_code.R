@@ -1,6 +1,7 @@
 library(data.table)
 
 #Set working directory where model output is stored
+##Use the model code in "/2 - Tests/abm_12-4-2021_master.R" to generate the model output -- this code collects additional results used to unit test the model output
 setwd("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/2 - Tests/Test Output")
 
 #Bind model output into single data table
