@@ -19,13 +19,13 @@ mitigation_c.high <- 1
 
 plotcols <- brewer.pal(6, 'Dark2')
 
-data <- data.table(readRDS("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Full Paper Output/Raw Data/revision_output_final_training.rds"))
+data <- data.table(readRDS("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Correction/Raw Data/revision_output_final_training.rds"))
 
-data_test <- data.table(readRDS("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Full Paper Output/Raw Data/revision_output_final_test.rds"))
+data_test <- data.table(readRDS("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Correction/Raw Data/revision_output_final_test.rds"))
 
-data_full <- data.table(readRDS("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Full Paper Output/Raw Data/revision_output_final_full.rds"))
+data_full <- data.table(readRDS("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Correction/Raw Data/revision_output_final_full.rds"))
 
-setwd("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Full Paper Output/Results")
+setwd("C:/Users/johnc/Dropbox (Harvard University)/Documents/Research/COVID-19/BackToSchool2/4 - Output/Paper 3/JNO Correction/Results")
 
 #Define potential smoothing functions
 specifications <- c(linear = "poly(prob, degree = 1, raw = TRUE)*poly(mitigation, degree = 1, raw = TRUE)",
@@ -52,9 +52,9 @@ cutoff.track <- data.table(expand.grid(outcomes = c("inschool.outbreak_inc.1", "
                                   outcomes == "all.overall" & risk.tolerance == "high" ~ 10,
                                   outcomes == "all.overall" & risk.tolerance == "medium" ~ 5,
                                   outcomes == "all.overall" & risk.tolerance == "low" ~ 3,
-                                  outcomes == "hosp" & risk.tolerance == "high" ~ 5,
-                                  outcomes == "hosp" & risk.tolerance == "medium" ~ 3,
-                                  outcomes == "hosp" & risk.tolerance == "low" ~ 1),
+                                  (outcomes == "hosp" | outcomes == "adult.hosp" | outcomes == "child.hosp") & risk.tolerance == "high" ~ 5,
+                                  (outcomes == "hosp" | outcomes == "adult.hosp" | outcomes == "child.hosp") & risk.tolerance == "medium" ~ 3,
+                                  (outcomes == "hosp" | outcomes == "adult.hosp" | outcomes == "child.hosp") & risk.tolerance == "low" ~ 1),
          threshold = numeric(nrow(.))))
 
 truncate.prob <- function(vector){
@@ -102,8 +102,8 @@ fit.meta.model <- function(specification, outcome, training.data, test.data, tes
 }
 
 for(outcome in c("inschool.outbreak_inc.1", "all.overall", "hosp")){
-  ylimit = ifelse(outcome == "all.overall", 45, ifelse(outcome == "hosp", 10, NA))
-  ytitle = ifelse(outcome == "all.overall", "Average Additional Cases per Month in School Community", ifelse(outcome == "hosp", "Average Additional Hospitalizations per 100k per Month in School Community", NA))
+  ylimit = ifelse(outcome == "all.overall", 45, ifelse(outcome == "hosp" | outcome == "adult.hosp" | outcome == "child.hosp", 10, NA))
+  ytitle = ifelse(outcome == "all.overall", "Average Additional Cases per Month in School Community", ifelse(outcome == "hosp", "Average Additional Hospitalizations per 100k per Month in School Community", ifelse(outcome == "adult.hosp", "Average Additional Hospitalizations per 100k per Month in Adults in School Community", ifelse(outcome == "child.hosp", "Average Additional Hospitalizations per 100k per Month in Children in School Community", NA))))
 
   for(adult.vax.rate in unique(data$teacher_susp)){
     print(paste("Working on adult vaccination rate", adult.vax.rate))
