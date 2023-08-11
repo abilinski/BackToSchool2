@@ -1,7 +1,6 @@
 ####************************** SIMULATIONS **************************#### 
 #### BASE CASES ####
 source("functions.R")
-source("abm7.R")
 
 #### ELEMENTARY SCHOOL BASE ####
 setwd(paste0(wd, "Base_Elem2"))

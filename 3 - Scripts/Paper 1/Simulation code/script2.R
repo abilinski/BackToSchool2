@@ -2,7 +2,6 @@
 
 #### SUPPLEMENTS ####
 source("functions.R")
-source("abm7.R")
 
 n_supp = 2000
 
